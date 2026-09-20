@@ -15,8 +15,6 @@ FUME does not decode payloads. FUME does not change the log files. FUME opens ea
 
 - [Usage](#usage)
 - [How to read the report](#how-to-read-the-report)
-- [The tlog format](#the-tlog-format)
-- [How FUME finds records](#how-fume-finds-records)
 - [Message IDs that are not in the table](#message-ids-that-are-not-in-the-table)
 - [Limits](#limits)
 
