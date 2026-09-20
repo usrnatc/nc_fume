@@ -11,8 +11,7 @@ struct ThreadLocalStorage {
     b32                      ARENA_THREAD_SCRATCH_INIT;
     b32                      IS_ASYNC_THREAD;
     struct ThreadContext*    LOCAL_THREAD_CTX;
-    struct SymTab*           SYMBOL_TABLE;
-    struct ParserState*      PARSER_STATE;
+    struct UIState*          UI_STATE;
     Arena*                   ARENA_THREAD_SCRATCH_POOL[ARENA_SCRATCH_COUNT];
 };
 
