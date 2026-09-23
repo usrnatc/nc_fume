@@ -262,6 +262,7 @@ TextPoint TxtPt(i64 Line, i64 Column);
 TextRange TxtRng(TextPoint Min, TextPoint Max);
 FMRangeList FuzzyFind(Arena* MemPool, Str8 Needle, Str8 String);
 Str8 ToLower(Arena* MemPool, Str8 String);
+FMRangeList ListCpy(Arena* MemPool, FMRangeList* List);
 
 #if defined(NC_LANG_CPP)
     #if NC_LANG_CPP_VERSION != 0 && NC_LANG_CPP_VERSION != 98

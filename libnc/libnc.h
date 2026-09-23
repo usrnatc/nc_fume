@@ -50,6 +50,11 @@
 #include "nc_file_stream.h"
 #include "nc_base64.h"
 #include "nc_sock.h"
+#include "nc_keyboard.h"
+#include "nc_draw.h"
+#include "nc_ui.h"
+#include "nc_ui_components.h"
+#include "nc_console.h"
 #include "nc_http.h"
 #include "nc_metadesk.h"
 
@@ -70,6 +75,9 @@
 #include "nc_content.cpp"
 #include "nc_file_stream.cpp"
 #include "nc_base64.cpp"
+#include "nc_draw.cpp"
+#include "nc_ui.cpp"
+#include "nc_ui_components.cpp"
 #include "nc_http.cpp"
 #include "nc_metadesk.cpp"
 
@@ -82,6 +90,7 @@
     #include "win32/win32_sync.cpp"
     #include "win32/win32_thread.cpp"
     #include "win32/win32_time.cpp"
+    #include "win32/win32_terminal.cpp"
     #include "win32/win32_print.cpp"
     #include "win32/win32_sock.cpp"
     #include "win32/win32_http.cpp"
@@ -161,15 +170,15 @@ MainThreadBaseEntryPoint(int ArgC, char** ArgV)
     ReleaseScratch(Scratch);
 }
 
-// INTERNAL b32
-// Update(void)
-// {
-//     b32 Result = FALSE;
+INTERNAL b32
+Update(void)
+{
+    b32 Result = FALSE;
 
-//     AtomicIncFetchU64(&GLOBAL_UPDATE_TICK_INDEX, MEM_ORDER_SEQ_CST);
+    AtomicIncFetchU64(&GLOBAL_UPDATE_TICK_INDEX, MEM_ORDER_SEQ_CST);
 
-//     return Result;
-// }
+    return Result;
+}
 #else
     #error libnc.h should only be included once in any file of your choosing
 #endif // __LIBNC_H__

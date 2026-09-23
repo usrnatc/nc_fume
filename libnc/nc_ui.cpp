@@ -1393,7 +1393,6 @@ UIBeginBuild(
         UI_STATE->ContextMenuAnchorBoxLastPosition = AnchorBox->Rect.Point0;
 
     v2f32 Anchor = UI_STATE->ContextMenuAnchorBoxLastPosition + UI_STATE->ContextMenuAnchorOffset;
-    f32 ContextMenuOpenT = CLAMP(0.0f, UI_STATE->ContextMenuOpenT, 1.0f);
 
     UIFixedX(Anchor.X) {
         UIFixedY(Anchor.Y) {
@@ -1503,8 +1502,10 @@ UIEndBuild(void)
         if (!IsUIBoxEmpty(AnchorBox)) {
             v2f32 Dimensions = Length(UI_STATE->TooltipRoot->Rect);
 
-            UI_STATE->TooltipRoot->FixedPosition.X = UI_STATE->TooltipRoot->Rect.X0 = AnchorBox->Rect.X0;
-            UI_STATE->TooltipRoot->FixedPosition.Y = UI_STATE->TooltipRoot->Rect.Y0 = AnchorBox->Rect.Y1 + AnchorBox->FontSize * 0.5f;
+            UI_STATE->TooltipRoot->FixedPosition.X = AnchorBox->Rect.X0;
+            UI_STATE->TooltipRoot->Rect.X0 = AnchorBox->Rect.X0;
+            UI_STATE->TooltipRoot->FixedPosition.Y = AnchorBox->Rect.Y1;
+            UI_STATE->TooltipRoot->Rect.Y0 = AnchorBox->Rect.Y1;
             UI_STATE->TooltipRoot->Rect.X1 = UI_STATE->TooltipRoot->Rect.X0 + Dimensions.X;
             UI_STATE->TooltipRoot->Rect.Y1 = UI_STATE->TooltipRoot->Rect.Y0 + Dimensions.Y;
         } else {
@@ -1518,27 +1519,22 @@ UIEndBuild(void)
         UI_STATE->ContextMenuRoot
     };
 
-    b32 ForceContain[] = {
-        !UI_STATE->TooltipCanOverflowWindow,
-        TRUE
-    };
-
     for (u64 Index = 0; Index < ARRAY_COUNT(FloatingRoots); ++Index) {
         UIBox* Root = FloatingRoots[Index];
 
         if (!IsUIBoxEmpty(Root)) {
-            r2f32 WindowRect = GetWindowClientRect(UIWindow());
+            r2f32 ConsoleRect = GetConsoleRect();
             r2f32 RootRect = Root->Rect;
             v2f32 ShiftDown = {};
             
-            ShiftDown.X = -MAX(0.0f, RootRect.X1 - WindowRect.X1) * ForceContain[Index];
-            ShiftDown.Y = -MAX(0.0f, RootRect.Y1 - WindowRect.Y1) * ForceContain[Index];
+            ShiftDown.X = -MAX(0.0f, RootRect.X1 - ConsoleRect.X1);
+            ShiftDown.Y = -MAX(0.0f, RootRect.Y1 - ConsoleRect.Y1);
 
             r2f32 NewRootRect = Shift(RootRect, ShiftDown);
             v2f32 ShiftUp = {};
 
-            ShiftUp.X = MAX(0.0f, WindowRect.X0 - NewRootRect.X0) * ForceContain[Index];
-            ShiftUp.Y = MAX(0.0f, WindowRect.Y0 - NewRootRect.Y0) * ForceContain[Index];
+            ShiftUp.X = MAX(0.0f, ConsoleRect.X0 - NewRootRect.X0);
+            ShiftUp.Y = MAX(0.0f, ConsoleRect.Y0 - NewRootRect.Y0);
             NewRootRect = Shift(NewRootRect, ShiftUp);
             Root->FixedPosition = NewRootRect.Point0;
             Root->FixedSize = Length(NewRootRect);
@@ -1550,35 +1546,6 @@ UIEndBuild(void)
                 UICalcSizesDownwardsDependent(Root, Axis);
                 UILayoutEnforceConstraints(Root, Axis);
                 UILayoutPosition(Root, Axis);
-            }
-        }
-    }
-
-    for (u64 SlotIndex = 0; SlotIndex < UI_STATE->BoxTableSize; ++SlotIndex) {
-        for (
-            UIBox* Box = UI_STATE->BoxTable[SlotIndex].Head; 
-            !IsUIBoxEmpty(Box); 
-            Box = Box->HashNext
-        ) {
-            if (Box->Kind & UI_BOX_KIND_ROUND_CHILDREN_BY_PARENT) {
-                for (UIBox* B = Box; !IsUIBoxEmpty(B); B = UIBoxRecordDFPre(B, Box).Next) {
-                    if (FloorF32(B->Rect.X0) <= FloorF32(Box->Rect.X0) && FloorF32(B->Rect.Y0) <= FloorF32(Box->Rect.Y0))
-                        B->CornerRadii[CORNER_00] = Box->CornerRadii[CORNER_00];
-
-                    if (FloorF32(B->Rect.X1) >= FloorF32(Box->Rect.X1) && FloorF32(B->Rect.Y0) <= FloorF32(Box->Rect.Y0))
-                        B->CornerRadii[CORNER_10] = Box->CornerRadii[CORNER_10];
-
-                    if (FloorF32(B->Rect.X0) <= FloorF32(Box->Rect.X0) && FloorF32(B->Rect.Y1) >= FloorF32(Box->Rect.Y1))
-                        B->CornerRadii[CORNER_01] = Box->CornerRadii[CORNER_01];
-
-                    if (FloorF32(B->Rect.X1) >= FloorF32(Box->Rect.X1) && FloorF32(B->Rect.Y1) >= FloorF32(Box->Rect.Y1))
-                        B->CornerRadii[CORNER_11] = Box->CornerRadii[CORNER_11];
-                }
-
-                Box->Head->CornerRadii[CORNER_00] = Box->CornerRadii[CORNER_00];
-                Box->Head->CornerRadii[CORNER_10] = Box->CornerRadii[CORNER_10];
-                Box->Tail->CornerRadii[CORNER_01] = Box->CornerRadii[CORNER_01];
-                Box->Tail->CornerRadii[CORNER_11] = Box->CornerRadii[CORNER_11];
             }
         }
     }
@@ -1613,17 +1580,8 @@ UIEndBuild(void)
         }
     }
 
-    UI_STATE->ContextMenuOpenT += ((f32) !!UI_STATE->ContextMenuOpen - UI_STATE->ContextMenuOpenT) * UI_STATE->AnimationInfo.MenuAnimationRate;
-    UI_STATE->IsAnimating = (UI_STATE->IsAnimating || AbsF32((f32) !!UI_STATE->ContextMenuOpen - UI_STATE->ContextMenuOpenT) > 0.01f);
-
-    if (UI_STATE->ContextMenuOpenT >= 0.99f && UI_STATE->ContextMenuOpen)
-        UI_STATE->ContextMenuOpenT = 1.0f;
-
-    UI_STATE->TooltipOpenT += ((f32) !!UI_STATE->TooltipOpen - UI_STATE->TooltipOpenT) * UI_STATE->AnimationInfo.TooltipAnimationRate;
-    UI_STATE->IsAnimating = (UI_STATE->IsAnimating || AbsF32((f32) !!UI_STATE->TooltipOpen - UI_STATE->TooltipOpenT) > 0.01f);
-
-    if (UI_STATE->TooltipOpenT >= 0.99f && UI_STATE->TooltipOpen)
-        UI_STATE->TooltipOpenT = 1.0f;
+    UI_STATE->ContextMenuOpenT += (f32) !!UI_STATE->ContextMenuOpen;
+    UI_STATE->TooltipOpenT += (f32) !!UI_STATE->TooltipOpen;
 
     for (u64 SlotIndex = 0; SlotIndex < UI_STATE->BoxTableSize; ++SlotIndex) {
         for (UIBox* Box = UI_STATE->BoxTable[SlotIndex].Head; !IsUIBoxEmpty(Box); Box = Box->HashNext) {
@@ -1690,10 +1648,10 @@ UIEndBuild(void)
                 Box->ViewOffset.X += UI_STATE->AnimationInfo.ScrollAnimationRate * (Box->ViewOffsetTarget.X - Box->ViewOffset.X);
                 Box->ViewOffset.Y += UI_STATE->AnimationInfo.ScrollAnimationRate * (Box->ViewOffsetTarget.Y - Box->ViewOffset.Y);
 
-                if (AbsF32(Box->ViewOffset.X - Box->ViewOffsetTarget.X) < 2.0f)
+                if (AbsF32(Box->ViewOffset.X - Box->ViewOffsetTarget.X) < 1.0f)
                     Box->ViewOffset.X = Box->ViewOffsetTarget.X;
 
-                if (AbsF32(Box->ViewOffset.Y - Box->ViewOffsetTarget.Y) < 2.0f)
+                if (AbsF32(Box->ViewOffset.Y - Box->ViewOffsetTarget.Y) < 1.0f)
                     Box->ViewOffset.Y = Box->ViewOffsetTarget.Y;
             }
         }
@@ -1731,8 +1689,7 @@ UIEndBuild(void)
         if (Box->Kind & UI_BOX_KIND_DISABLED && Box->Kind & UI_BOX_KIND_CLICKABLE)
             Cursor = CURSOR_KIND_DISABLED;
 
-        if (WindowIsFocused(UI_STATE->WindowHandle) || !IsUIBoxEmpty(Active))
-            SetCursorKind(Cursor);
+        SetCursorKind(Cursor);
     }
 
     UIBox* Box = UIBoxFromKey(UI_STATE->ClipboardCopyKey);
@@ -1748,8 +1705,7 @@ UIEndBuild(void)
         ) {
             if (
                 B->Kind & UI_BOX_KIND_DRAW_TEXT && 
-                B->Kind & UI_BOX_KIND_HAS_DISPLAY_STRING && 
-                B->Font != UIIconFont()
+                B->Kind & UI_BOX_KIND_HAS_DISPLAY_STRING
             ) {
                 Str8 DisplayString = UIBoxDisplayStr(B);
 
@@ -1814,19 +1770,10 @@ UIEndBuild(void)
 
                     Str8 BoxDisplayString = UIBoxDisplayStr(B);
                     v2f32 TextPosition = UIBoxTextPosition(B);
-
-                    v2f32 DrawnTextDimensions = FontDimensionsFromTagSizeString(
-                        B->Font, 
-                        B->FontSize, 
-                        0.0f, 
-                        B->TabSize, 
-                        BoxDisplayString
-                    );
-
+                    v2f32 DrawnTextDimensions = B->DisplayDimensions;
                     b32 TextIsTruncated = (
                         DrawnTextDimensions.X + TextPosition.X > Rect.X1
                     );
-
                     b32 MouseIsHovering = InRange(
                         Rng(
                             TextPosition.X, 
@@ -1850,23 +1797,17 @@ UIEndBuild(void)
                                 BoxDisplayString, 
                                 UI_STATE->StringHoverString, 
                                 0
-                            ) || 
-                            B->FontSize != UI_STATE->StringHoverSize
+                            )
                         ) {
                             ArenaClear(UI_STATE->StringHoverMemPool);
-
                             UI_STATE->StringHoverString = ArenaPushStrCpy(
                                 UI_STATE->StringHoverMemPool, 
                                 BoxDisplayString
                             );
-
-                            UI_STATE->StringHoverSize = B->FontSize;
-
                             UI_STATE->StringHoverFancyStrings = ListCpy(
                                 UI_STATE->StringHoverMemPool, 
                                 &B->DisplayFancyStrings
                             );
-
                             UI_STATE->StringHoverBeginUSecs = TimeGetTimestamp();
                         }
 
@@ -1917,7 +1858,7 @@ UICalcSizesStandalone(UIBox* Root, Axis2D Axis)
 
             case UI_SIZE_KIND_TEXT_CONTENT: {
                 f32 Padding = Box->PreferredSize[Axis].Value;
-                f32 TextSize = Box->DisplayFancyRuns.Dimensions.X;
+                f32 TextSize = Box->DisplayDimensions.V[Axis];
 
                 Box->FixedSize.V[Axis] = Padding + TextSize + Box->TextPadding * 2.0f;
             } break;
@@ -2152,8 +2093,6 @@ UITooltipBeginBase(void)
     UIPushParent(UIRootFromState(UI_STATE));
     UIPushParent(UI_STATE->TooltipRoot);
     UIPushFlags(0);
-    UIPushTextRasterKind(UITailTextRasterKind());
-    UIPushFontSize(UITailFontSize());
     UIPushTag("."_s8);
     UIPushTag("floating"_s8);
 }
@@ -2163,8 +2102,6 @@ UITooltipEndBase(void)
 {
     UIPopTag();
     UIPopTag();
-    UIPopFontSize();
-    UIPopTextRasterKind();
     UIPopFlags();
     UIPopParent();
     UIPopParent();
@@ -2176,26 +2113,20 @@ UITooltipBegin(void)
     UIState* UI_STATE = GetTLS()->UI_STATE;
 
     UITooltipBeginBase();
-    UISetNextSquish(0.1f - UI_STATE->TooltipOpenT * 0.1f);
-    UISetNextTransparency(1.0f - UI_STATE->TooltipOpenT);
     UIFlags(
         UI_BOX_KIND_FLOATING | 
         UI_BOX_KIND_DRAW_BACKGROUND | 
-        UI_BOX_KIND_DRAW_BACKGROUND_BLUR | 
-        UI_BOX_KIND_DRAW_DROP_SHADOW | 
-        UI_BOX_KIND_SQUISH_ANCHORED
+        UI_BOX_KIND_DRAW_DROP_SHADOW
     ) {
         UIPreferredWidth(UI_SUM_OF_CHILDREN(1.0f)) {
             UIPreferredHeight(UI_SUM_OF_CHILDREN(1.0f)) {
-                UICornerRadius(UIHeadFontSize() * 0.25f) {
-                    UIColumnBegin();
-                }
+                UIColumnBegin();
             }
         }
     }
 
     UIPreferredWidth(UI_PX(0.0f, 1.0f))
-        UISpacer(UI_EM(1.0f, 1.0f));
+        UISpacer(UI_PX(1.0f, 1.0f));
 
     UIPreferredWidth(UI_SUM_OF_CHILDREN(1.0f)) {
         UIPreferredHeight(UI_SUM_OF_CHILDREN(1.0f)) {
@@ -2204,7 +2135,7 @@ UITooltipBegin(void)
     }
 
     UIPreferredHeight(UI_PX(0.0f, 1.0f))
-        UISpacer(UI_EM(1.0f, 1.0f));
+        UISpacer(UI_PX(1.0f, 1.0f));
 
     UIPreferredWidth(UI_SUM_OF_CHILDREN(1.0f)) {
         UIPreferredHeight(UI_SUM_OF_CHILDREN(1.0f)) {
@@ -2213,7 +2144,7 @@ UITooltipBegin(void)
     }
 
     UIPushPreferredWidth(UI_TEXT_DIM(10.0f, 1.0f));
-    UIPushPreferredHeight(UI_EM(2.0f, 1.0f));
+    UIPushPreferredHeight(UI_PX(1.0f, 1.0f));
     UIPushTextAlignment(UI_TEXT_ALIGN_CENTRE);
 }
 
@@ -2226,13 +2157,13 @@ UITooltipEnd(void)
     UIColumnEnd();
 
     UIPreferredHeight(UI_PX(0.0f, 1.0f)) {
-        UISpacer(UI_EM(1.0f, 1.0f));
+        UISpacer(UI_PX(1.0f, 1.0f));
     }
 
     UIRowEnd();
 
     UIPreferredWidth(UI_PX(0.0f, 1.0f)) {
-        UISpacer(UI_EM(1.0f, 1.0f));
+        UISpacer(UI_PX(1.0f, 1.0f));
     }
 
     UIColumnEnd();
@@ -2276,32 +2207,20 @@ UIBeginContextMenu(UIKey Key)
     UIPushFocusHot(UI_FOCUS_KIND_ROOT);
     UIPushFocusActive(UI_FOCUS_KIND_ROOT);
     UIPushTag("."_s8);
-    UIPushTransparency(1.0f - UI_STATE->ContextMenuOpenT);
 
     b32 IsOpen = (Key == UI_STATE->ContextMenuKey) && UI_STATE->ContextMenuOpen;
 
     if (IsOpen) {
         UITag("floating"_s8) {
             UI_STATE->ContextMenuTouchedThisFrame = TRUE;
-            UI_STATE->ContextMenuRoot->Kind |= UI_BOX_KIND_ROUND_CHILDREN_BY_PARENT;
-            UI_STATE->ContextMenuRoot->Kind |= UI_BOX_KIND_DRAW_BACKGROUND_BLUR;
             UI_STATE->ContextMenuRoot->Kind |= UI_BOX_KIND_DRAW_BACKGROUND;
             UI_STATE->ContextMenuRoot->Kind |= UI_BOX_KIND_DISABLE_FOCUS_OVERLAY;
             UI_STATE->ContextMenuRoot->Kind |= UI_BOX_KIND_CLIP;
             UI_STATE->ContextMenuRoot->Kind |= UI_BOX_KIND_CLICKABLE;
-            UI_STATE->ContextMenuRoot->CornerRadii[CORNER_00] = UIHeadFontSize() * 0.25f;
-            UI_STATE->ContextMenuRoot->CornerRadii[CORNER_01] = UIHeadFontSize() * 0.25f;
-            UI_STATE->ContextMenuRoot->CornerRadii[CORNER_10] = UIHeadFontSize() * 0.25f;
-            UI_STATE->ContextMenuRoot->CornerRadii[CORNER_11] = UIHeadFontSize() * 0.25f;
             UI_STATE->ContextMenuRoot->TagsKey = UIHeadTagsKey();
-            UI_STATE->ContextMenuRoot->BlurSize = UIHeadBlurSize();
-
-            if (UI_STATE->ContextMenuRoot->BlurSize <= 0.0f)
-                UI_STATE->ContextMenuRoot->BlurSize = 50.0f;
-
             UI_STATE->ContextMenuRoot->TextColour = UIColourFromName("text"_s8);
             UI_STATE->ContextMenuRoot->BackgroundColour = UIColourFromName("background"_s8);
-            UISpacer(UI_EM(1.0f, 1.0f));
+            UISpacer(UI_PX(1.0f, 1.0f));
         }
     }
 
@@ -2317,10 +2236,9 @@ UIEndContextMenu(void)
 
     if (UI_STATE->IsInOpenContextMenu) {
         UI_STATE->IsInOpenContextMenu = FALSE;
-        UISpacer(UI_EM(1.0f, 1.0f));
+        UISpacer(UI_PX(1.0f, 1.0f));
     }
 
-    UIPopTransparency();
     UIPopTag();
     UIPopFocusActive();
     UIPopFocusHot();
@@ -2666,7 +2584,6 @@ UIBuildBoxFromKey(UIBoxKind Kind, UIKey Key)
     Box->Kind = 0;
     Box->HoverCursor = CURSOR_KIND_POINTER;
     MemSet(Box->PreferredSize, 0, sizeof(Box->PreferredSize));
-    MemSet(&Box->DrawBucket, 0, sizeof(*Box->DrawBucket));
 
     if (BoxFirstFrame && !BoxIsTransient) {
         u64 Slot = *Key.V % UI_STATE->BoxTableSize;
@@ -2751,17 +2668,7 @@ UIBuildBoxFromKey(UIBoxKind Kind, UIKey Key)
 
     Box->TextAlign = UI_STATE->TextAlignmentStack.Head->V;
     Box->ChildLayoutAxis = UI_STATE->ChildLayoutAxisStack.Head->V;
-    Box->Font = UI_STATE->FontStack.Head->V;
-    Box->FontSize = UI_STATE->FontSizeStack.Head->V;
     Box->TabSize = UI_STATE->TabSizeStack.Head->V;
-    Box->TextRasterKind = UI_STATE->TextRasterKindStack.Head->V;
-    Box->CornerRadii[CORNER_00] = UI_STATE->CornerRadius00Stack.Head->V;
-    Box->CornerRadii[CORNER_01] = UI_STATE->CornerRadius01Stack.Head->V;
-    Box->CornerRadii[CORNER_10] = UI_STATE->CornerRadius10Stack.Head->V;
-    Box->CornerRadii[CORNER_11] = UI_STATE->CornerRadius11Stack.Head->V;
-    Box->BlurSize = UI_STATE->BlurSizeStack.Head->V;
-    Box->Transparency = UI_STATE->TransparencyStack.Head->V;
-    Box->Squish = UI_STATE->SquishStack.Head->V;
     Box->TextPadding = UI_STATE->TextPaddingStack.Head->V;
     Box->HoverCursor = UI_STATE->HoverCursorStack.Head->V;
     Box->CustomDrawFunc = NULL;
@@ -2880,11 +2787,6 @@ UIBuildBoxFromKey(UIBoxKind Kind, UIKey Key)
         UI_STATE->GroupKeyStack.AutoPop = FALSE;
     }
 
-    if (UI_STATE->TransparencyStack.AutoPop) {
-        UIPopTransparency();
-        UI_STATE->TransparencyStack.AutoPop = FALSE;
-    }
-
     if (UI_STATE->TagStack.AutoPop) {
         UIPopTag();
         UI_STATE->TagStack.AutoPop = FALSE;
@@ -2905,59 +2807,14 @@ UIBuildBoxFromKey(UIBoxKind Kind, UIKey Key)
         UI_STATE->BorderColourStack.AutoPop = FALSE;
     }
 
-    if (UI_STATE->SquishStack.AutoPop) {
-        UIPopSquish();
-        UI_STATE->SquishStack.AutoPop = FALSE;
-    }
-
     if (UI_STATE->HoverCursorStack.AutoPop) {
         UIPopHoverCursor();
         UI_STATE->HoverCursorStack.AutoPop = FALSE;
     }
 
-    if (UI_STATE->FontStack.AutoPop) {
-        UIPopFont();
-        UI_STATE->FontStack.AutoPop = FALSE;
-    }
-
-    if (UI_STATE->FontSizeStack.AutoPop) {
-        UIPopFontSize();
-        UI_STATE->FontSizeStack.AutoPop = FALSE;
-    }
-
-    if (UI_STATE->TextRasterKindStack.AutoPop) {
-        UIPopTextRasterKind();
-        UI_STATE->TextRasterKindStack.AutoPop = FALSE;
-    }
-
     if (UI_STATE->TabSizeStack.AutoPop) {
         UIPopTabSize();
         UI_STATE->TabSizeStack.AutoPop = FALSE;
-    }
-
-    if (UI_STATE->CornerRadius00Stack.AutoPop) {
-        UIPopCornerRadius00();
-        UI_STATE->CornerRadius00Stack.AutoPop = FALSE;
-    }
-
-    if (UI_STATE->CornerRadius01Stack.AutoPop) {
-        UIPopCornerRadius01();
-        UI_STATE->CornerRadius01Stack.AutoPop = FALSE;
-    }
-
-    if (UI_STATE->CornerRadius10Stack.AutoPop) {
-        UIPopCornerRadius10();
-        UI_STATE->CornerRadius10Stack.AutoPop = FALSE;
-    }
-
-    if (UI_STATE->CornerRadius11Stack.AutoPop) {
-        UIPopCornerRadius11();
-        UI_STATE->CornerRadius11Stack.AutoPop = FALSE;
-    }
-
-    if (UI_STATE->BlurSizeStack.AutoPop) {
-        UIPopBlurSize();
-        UI_STATE->BlurSizeStack.AutoPop = FALSE;
     }
 
     if (UI_STATE->TextPaddingStack.AutoPop) {
@@ -3035,11 +2892,8 @@ v2f32
 UIBoxTextPosition(UIBox* Box)
 {
     v2f32 Result = {};
-    FontTag Font = Box->Font;
-    f32 FontSize = Box->FontSize;
-    FontMetrics Metrics = FontMetricsFromTagSize(Font, FontSize);
 
-    Result.Y = FloorF32((Box->Rect.Point0.Y + Box->Rect.Point1.Y) / 2.0f + Metrics.Ascent / 2.0f - Metrics.Descent / 2.0f);
+    Result.Y = FloorF32((Box->Rect.Point0.Y + Box->Rect.Point1.Y) / 2.0f);
 
     switch (Box->TextAlign) {
         default:
@@ -3048,14 +2902,14 @@ UIBoxTextPosition(UIBox* Box)
         } break;
 
         case UI_TEXT_ALIGN_CENTRE: {
-            v2f32 TextDimensions = Box->DisplayFancyRuns.Dimensions;
+            v2f32 TextDimensions = Box->DisplayDimensions;
 
             Result.X = RoundF32((Box->Rect.Point0.X + Box->Rect.Point1.X) / 2.0f - TextDimensions.X / 2.0f);
             Result.X = CLAMP_BOT(Result.X, Box->Rect.X0);
         } break;
 
         case UI_TEXT_ALIGN_RIGHT: {
-            v2f32 TextDimensions = Box->DisplayFancyRuns.Dimensions;
+            v2f32 TextDimensions = Box->DisplayDimensions;
 
             Result.X = RoundF32((Box->Rect.Point1.X) - TextDimensions.X - Box->TextPadding);
             Result.X = CLAMP_BOT(Result.X, Box->Rect.X0);
@@ -3070,10 +2924,8 @@ UIBoxTextPosition(UIBox* Box)
 u64 
 UIBoxCharPositionFromXY(UIBox* Box, v2f32 XY)
 {
-    FontTag Font = Box->Font;
-    f32 FontSize = Box->FontSize;
     Str8 Line = UIBoxDisplayStr(Box);
-    u64 Result = FontCharPositionFromTagSizeString(Font, FontSize, 0.0f, Box->TabSize, Line, XY.X - UIBoxTextPosition(Box).X);
+    u64 Result = DCharPositionFromStr(Box->TabSize, Line, XY.X - UIBoxTextPosition(Box).X);
 
     return Result;
 }
@@ -3142,7 +2994,7 @@ UISignalFromBox(UIBox* Box)
 
             if (
                 (Box->Key == UI_STATE->PressKeyHistory[EventMouseBtnKind][0]) &&
-                Event->TimestampUSecs - UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0] <= 1000000 * GetGraphicsProperties()->DoubleClickTime
+                Event->TimestampUSecs - UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0] <= 1000000 * GetTerminalProperties()->DoubleClickTime
             ) {
                 Signal.Kind |= (UI_SIGNAL_KIND_LEFT_DOUBLE_CLICKED << EventMouseBtnKind);
             }
@@ -3150,8 +3002,8 @@ UISignalFromBox(UIBox* Box)
             if (
                 (Box->Key == UI_STATE->PressKeyHistory[EventMouseBtnKind][0]) &&
                 (Box->Key == UI_STATE->PressKeyHistory[EventMouseBtnKind][1]) &&
-                Event->TimestampUSecs - UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0] <= 1000000 * GetGraphicsProperties()->DoubleClickTime &&
-                UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0] - UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][1] <= 1000000 * GetGraphicsProperties()->DoubleClickTime
+                Event->TimestampUSecs - UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0] <= 1000000 * GetTerminalProperties()->DoubleClickTime &&
+                UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0] - UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][1] <= 1000000 * GetTerminalProperties()->DoubleClickTime
             ) {
                 Signal.Kind |= (UI_SIGNAL_KIND_LEFT_TRIPLE_CLICKED << EventMouseBtnKind);
             }
@@ -3358,8 +3210,8 @@ UISignalFromBox(UIBox* Box)
                 Signal.Kind & (UI_SIGNAL_KIND_LEFT_DRAGGING << MouseBtnKind) &&
                 (UI_STATE->PressKeyHistory[MouseBtnKind][0] == Box->Key) &&
                 (UI_STATE->PressKeyHistory[MouseBtnKind][1] == Box->Key) &&
-                UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][0] - UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][1] <= 1000000 * GetGraphicsProperties()->DoubleClickTime &&
-                Length((UI_STATE->PressPositionHistory[MouseBtnKind][0] - UI_STATE->PressPositionHistory[MouseBtnKind][1])) < 10.0f
+                UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][0] - UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][1] <= 1000000 * GetTerminalProperties()->DoubleClickTime &&
+                Length((UI_STATE->PressPositionHistory[MouseBtnKind][0] - UI_STATE->PressPositionHistory[MouseBtnKind][1])) < 2.0f
             ) {
                 Signal.Kind |= (UI_SIGNAL_KIND_LEFT_DOUBLE_DRAGGING << MouseBtnKind);
             }
@@ -3373,10 +3225,10 @@ UISignalFromBox(UIBox* Box)
                 (UI_STATE->PressKeyHistory[MouseBtnKind][0] == Box->Key) &&
                 (UI_STATE->PressKeyHistory[MouseBtnKind][1] == Box->Key) &&
                 (UI_STATE->PressKeyHistory[MouseBtnKind][2] == Box->Key) &&
-                (UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][0] - UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][1] <= 1000000 * GetGraphicsProperties()->DoubleClickTime) &&
-                (UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][1] - UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][2] <= 1000000 * GetGraphicsProperties()->DoubleClickTime) &&
-                (Length((UI_STATE->PressPositionHistory[MouseBtnKind][0] - UI_STATE->PressPositionHistory[MouseBtnKind][1])) < 10.0f) &&
-                (Length((UI_STATE->PressPositionHistory[MouseBtnKind][1] - UI_STATE->PressPositionHistory[MouseBtnKind][2])) < 10.0f)
+                (UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][0] - UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][1] <= 1000000 * GetTerminalProperties()->DoubleClickTime) &&
+                (UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][1] - UI_STATE->PressTimestampHistoryUSecs[MouseBtnKind][2] <= 1000000 * GetTerminalProperties()->DoubleClickTime) &&
+                (Length((UI_STATE->PressPositionHistory[MouseBtnKind][0] - UI_STATE->PressPositionHistory[MouseBtnKind][1])) < 2.0f) &&
+                (Length((UI_STATE->PressPositionHistory[MouseBtnKind][1] - UI_STATE->PressPositionHistory[MouseBtnKind][2])) < 2.0f)
             ) {
                 Signal.Kind |= (UI_SIGNAL_KIND_LEFT_TRIPLE_DRAGGING << MouseBtnKind);
             }
@@ -3665,24 +3517,6 @@ UISetNextPreferredSize(Axis2D Axis, UISize Size)
 }
 
 void 
-UIPushCornerRadius(f32 Radius)
-{
-    UIPushCornerRadius00(Radius);
-    UIPushCornerRadius01(Radius);
-    UIPushCornerRadius10(Radius);
-    UIPushCornerRadius11(Radius);
-}
-
-void 
-UIPopCornerRadius(void)
-{
-    UIPopCornerRadius11();
-    UIPopCornerRadius10();
-    UIPopCornerRadius01();
-    UIPopCornerRadius00();
-}
-
-void 
 UIPushTagFmt(char* Fmt, ...)
 {
     TempArena Scratch = GetScratch(NULL, 0);
@@ -3695,25 +3529,6 @@ UIPushTagFmt(char* Fmt, ...)
     UIPushTag(String);
     va_end(Args);
     ReleaseScratch(Scratch);
-}
-
-f32 
-UIHeadPXHeight(void)
-{
-    f32 Result = UIHeadFontSize();
-
-    for (
-        UIPreferredHeightNode* Node = GetTLS()->UI_STATE->PreferredHeightStack.Head; 
-        Node; 
-        Node = Node->Next
-    ) {
-        if (Node->V.Kind == UI_SIZE_KIND_PIXELS) {
-            Result = Node->V.Value;
-            break;
-        }
-    }
-
-    return Result;
 }
 
 UIBox* 
@@ -3818,12 +3633,6 @@ UIHeadGroupKey(void)
     return UI_STACK_HEAD(GetTLS()->UI_STATE, GroupKey);
 }
 
-f32 
-UIHeadTransparency(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, Transparency);
-}
-
 Str8 
 UIHeadTag(void)
 {
@@ -3848,70 +3657,16 @@ UIHeadBorderColour(void)
     return UI_STACK_HEAD(GetTLS()->UI_STATE, BorderColour);
 }
 
-f32 
-UIHeadSquish(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, Squish);
-}
-
 CursorKind 
 UIHeadHoverCursor(void)
 {
     return UI_STACK_HEAD(GetTLS()->UI_STATE, HoverCursor);
 }
 
-FontTag 
-UIHeadFont(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, Font);
-}
-
-f32 
-UIHeadFontSize(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, FontSize);
-}
-
-FontRasterKind 
-UIHeadTextRasterKind(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, TextRasterKind);
-}
-
 f32 
 UIHeadTabSize(void)
 {
     return UI_STACK_HEAD(GetTLS()->UI_STATE, TabSize);
-}
-
-f32 
-UIHeadCornerRadius00(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, CornerRadius00);
-}
-
-f32 
-UIHeadCornerRadius01(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, CornerRadius01);
-}
-
-f32 
-UIHeadCornerRadius10(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, CornerRadius10);
-}
-
-f32 
-UIHeadCornerRadius11(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, CornerRadius11);
-}
-
-f32 
-UIHeadBlurSize(void)
-{
-    return UI_STACK_HEAD(GetTLS()->UI_STATE, BlurSize);
 }
 
 f32 
@@ -4028,12 +3783,6 @@ UITailGroupKey(void)
     return UI_STACK_TAIL(GetTLS()->UI_STATE, GroupKey);
 }
 
-f32 
-UITailTransparency(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, Transparency);
-}
-
 Str8 
 UITailTag(void)
 {
@@ -4058,70 +3807,16 @@ UITailBorderColour(void)
     return UI_STACK_TAIL(GetTLS()->UI_STATE, BorderColour);
 }
 
-f32 
-UITailSquish(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, Squish);
-}
-
 CursorKind 
 UITailHoverCursor(void)
 {
     return UI_STACK_TAIL(GetTLS()->UI_STATE, HoverCursor);
 }
 
-FontTag 
-UITailFont(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, Font);
-}
-
-f32 
-UITailFontSize(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, FontSize);
-}
-
-FontRasterKind 
-UITailTextRasterKind(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, TextRasterKind);
-}
-
 f32 
 UITailTabSize(void)
 {
     return UI_STACK_TAIL(GetTLS()->UI_STATE, TabSize);
-}
-
-f32 
-UITailCornerRadius00(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, CornerRadius00);
-}
-
-f32 
-UITailCornerRadius01(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, CornerRadius01);
-}
-
-f32 
-UITailCornerRadius10(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, CornerRadius10);
-}
-
-f32 
-UITailCornerRadius11(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, CornerRadius11);
-}
-
-f32 
-UITailBlurSize(void)
-{
-    return UI_STACK_TAIL(GetTLS()->UI_STATE, BlurSize);
 }
 
 f32 
@@ -4238,12 +3933,6 @@ UIPushGroupKey(UIKey Value)
     UI_STACK_PUSH(GetTLS()->UI_STATE, GroupKey, UIKey, Value);
 }
 
-f32 
-UIPushTransparency(f32 Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, Transparency, f32, Value);
-}
-
 Str8 
 UIPushTag(Str8 Value)
 {
@@ -4269,70 +3958,16 @@ UIPushBorderColour(v4f32 Value)
     UI_STACK_PUSH(GetTLS()->UI_STATE, BorderColour, v4f32, Value);
 }
 
-f32 
-UIPushSquish(f32 Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, Squish, f32, Value);
-}
-
 CursorKind 
 UIPushHoverCursor(CursorKind Value)
 {
     UI_STACK_PUSH(GetTLS()->UI_STATE, HoverCursor, CursorKind, Value);
 }
 
-FontTag 
-UIPushFont(FontTag Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, Font, FontTag, Value);
-}
-
-f32 
-UIPushFontSize(f32 Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, FontSize, f32, Value);
-}
-
-FontRasterKind 
-UIPushTextRasterKind(FontRasterKind Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, TextRasterKind, FontRasterKind, Value);
-}
-
 f32 
 UIPushTabSize(f32 Value)
 {
     UI_STACK_PUSH(GetTLS()->UI_STATE, TabSize, f32, Value);
-}
-
-f32 
-UIPushCornerRadius00(f32 Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, CornerRadius00, f32, Value);
-}
-
-f32 
-UIPushCornerRadius01(f32 Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, CornerRadius01, f32, Value);
-}
-
-f32 
-UIPushCornerRadius10(f32 Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, CornerRadius10, f32, Value);
-}
-
-f32 
-UIPushCornerRadius11(f32 Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, CornerRadius11, f32, Value);
-}
-
-f32 
-UIPushBlurSize(f32 Value)
-{
-    UI_STACK_PUSH(GetTLS()->UI_STATE, BlurSize, f32, Value);
 }
 
 f32 
@@ -4449,12 +4084,6 @@ UIPopGroupKey(void)
     UI_STACK_POP(GetTLS()->UI_STATE, GroupKey);
 }
 
-f32 
-UIPopTransparency(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, Transparency);
-}
-
 Str8 
 UIPopTag(void)
 {
@@ -4480,70 +4109,16 @@ UIPopBorderColour(void)
     UI_STACK_POP(GetTLS()->UI_STATE, BorderColour);
 }
 
-f32 
-UIPopSquish(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, Squish);
-}
-
 CursorKind 
 UIPopHoverCursor(void)
 {
     UI_STACK_POP(GetTLS()->UI_STATE, HoverCursor);
 }
 
-FontTag 
-UIPopFont(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, Font);
-}
-
-f32 
-UIPopFontSize(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, FontSize);
-}
-
-FontRasterKind 
-UIPopTextRasterKind(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, TextRasterKind);
-}
-
 f32 
 UIPopTabSize(void)
 {
     UI_STACK_POP(GetTLS()->UI_STATE, TabSize);
-}
-
-f32 
-UIPopCornerRadius00(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, CornerRadius00);
-}
-
-f32 
-UIPopCornerRadius01(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, CornerRadius01);
-}
-
-f32 
-UIPopCornerRadius10(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, CornerRadius10);
-}
-
-f32 
-UIPopCornerRadius11(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, CornerRadius11);
-}
-
-f32 
-UIPopBlurSize(void)
-{
-    UI_STACK_POP(GetTLS()->UI_STATE, BlurSize);
 }
 
 f32 
@@ -4660,12 +4235,6 @@ UISetNextGroupKey(UIKey Value)
     UI_STACK_SET_NEXT(GetTLS()->UI_STATE, GroupKey, UIKey, Value);
 }
 
-f32 
-UISetNextTransparency(f32 Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, Transparency, f32, Value);
-}
-
 Str8 
 UISetNextTag(Str8 Value)
 {
@@ -4691,70 +4260,16 @@ UISetNextBorderColour(v4f32 Value)
     UI_STACK_SET_NEXT(GetTLS()->UI_STATE, BorderColour, v4f32, Value);
 }
 
-f32 
-UISetNextSquish(f32 Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, Squish, f32, Value);
-}
-
 CursorKind 
 UISetNextHoverCursor(CursorKind Value)
 {
     UI_STACK_SET_NEXT(GetTLS()->UI_STATE, HoverCursor, CursorKind, Value);
 }
 
-FontTag 
-UISetNextFont(FontTag Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, Font, FontTag, Value);
-}
-
-f32 
-UISetNextFontSize(f32 Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, FontSize, f32, Value);
-}
-
-FontRasterKind 
-UISetNextTextRasterKind(FontRasterKind Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, TextRasterKind, FontRasterKind, Value);
-}
-
 f32 
 UISetNextTabSize(f32 Value)
 {
     UI_STACK_SET_NEXT(GetTLS()->UI_STATE, TabSize, f32, Value);
-}
-
-f32 
-UISetNextCornerRadius00(f32 Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, CornerRadius00, f32, Value);
-}
-
-f32 
-UISetNextCornerRadius01(f32 Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, CornerRadius01, f32, Value);
-}
-
-f32 
-UISetNextCornerRadius10(f32 Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, CornerRadius10, f32, Value);
-}
-
-f32 
-UISetNextCornerRadius11(f32 Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, CornerRadius11, f32, Value);
-}
-
-f32 
-UISetNextBlurSize(f32 Value)
-{
-    UI_STACK_SET_NEXT(GetTLS()->UI_STATE, BlurSize, f32, Value);
 }
 
 f32 
@@ -4790,12 +4305,8 @@ UIBoxEquipDisplayStr(UIBox* Box, Str8 String)
             {
                 DisplayString,
                 {
-                    Box->Font,
-                    Box->TextRasterKind,
                     Box->TextColour,
-                    Box->FontSize,
-                    0.0f,
-                    0.0f
+                    0
                 }
             }
         };
@@ -4807,8 +4318,7 @@ UIBoxEquipDisplayStr(UIBox* Box, Str8 String)
         };
 
         Box->DisplayFancyStrings = ListCpy(UIBuildMemPool(), &FStrings);
-        Box->DisplayFancyRuns = FancyRunListFromFancyStrList(
-            UIBuildMemPool(), 
+        Box->DisplayDimensions = DDimensionsFromFancyStrList(
             Box->TabSize, 
             &Box->DisplayFancyStrings
         );
@@ -4829,12 +4339,8 @@ UIBoxEquipDisplayStr(UIBox* Box, Str8 String)
                 {
                     StrSkip(DisplayString, FastpathCodepointPosition + FastpathCodepoint.Size),
                     {
-                        Box->Font,
-                        Box->TextRasterKind,
                         Box->TextColour,
-                        Box->FontSize,
-                        0.0f,
-                        0.0f
+                        0
                     }
                 }
             };
@@ -4844,12 +4350,8 @@ UIBoxEquipDisplayStr(UIBox* Box, Str8 String)
                 {
                     StrSub(DisplayString, Rng(FastpathCodepointPosition, FastpathCodepointPosition + FastpathCodepoint.Size)),
                     {
-                        Box->Font,
-                        Box->TextRasterKind,
                         Box->TextColour,
-                        Box->FontSize,
-                        3.0f,
-                        0.0f
+                        FANCY_STR_FLAG_UNDERLINE
                     }
                 }
             };
@@ -4859,12 +4361,8 @@ UIBoxEquipDisplayStr(UIBox* Box, Str8 String)
                 {
                     StrPrefix(DisplayString, FastpathCodepointPosition),
                     {
-                        Box->Font,
-                        Box->TextRasterKind,
                         Box->TextColour,
-                        Box->FontSize,
-                        0.0f,
-                        0.0f
+                        0
                     }
                 }
             };
@@ -4876,19 +4374,18 @@ UIBoxEquipDisplayStr(UIBox* Box, Str8 String)
             };
 
             Box->DisplayFancyStrings = ListCpy(UIBuildMemPool(), &FancyStrings);
-            Box->DisplayFancyRuns = FancyRunListFromFancyStrList(UIBuildMemPool(), Box->TabSize, &Box->DisplayFancyStrings);
+            Box->DisplayDimensions = DDimensionsFromFancyStrList(
+                Box->TabSize, 
+                &Box->DisplayFancyStrings
+            );
         } else {
             FancyStrNode FStringNode = {
                 NULL,
                 {
                     DisplayString,
                     {
-                        Box->Font,
-                        Box->TextRasterKind,
                         Box->TextColour,
-                        Box->FontSize,
-                        0.0f,
-                        0.0f
+                        0
                     }
                 }
             };
@@ -4900,7 +4397,7 @@ UIBoxEquipDisplayStr(UIBox* Box, Str8 String)
             };
 
             Box->DisplayFancyStrings = ListCpy(UIBuildMemPool(), &FancyStrings);
-            Box->DisplayFancyRuns = FancyRunListFromFancyStrList(UIBuildMemPool(), Box->TabSize, &Box->DisplayFancyStrings);
+            Box->DisplayDimensions = DDimensionsFromFancyStrList(Box->TabSize, &Box->DisplayFancyStrings);
         }
 
         ReleaseScratch(Scratch);
@@ -4913,7 +4410,7 @@ UIBoxEquipDisplayFancyStrs(UIBox* Box, FancyStrList* Strings)
     Box->Kind |= UI_BOX_KIND_HAS_DISPLAY_STRING;
     Box->String = Str8FromFancyStrList(UIBuildMemPool(), Strings);
     Box->DisplayFancyStrings = ListCpy(UIBuildMemPool(), Strings);
-    Box->DisplayFancyRuns = FancyRunListFromFancyStrList(UIBuildMemPool(), Box->TabSize, &Box->DisplayFancyStrings);
+    Box->DisplayDimensions = DDimensionsFromFancyStrList(Box->TabSize, &Box->DisplayFancyStrings);
 }
 
 void
@@ -4924,20 +4421,6 @@ UIBoxEquipFuzzyMatchRanges(UIBox* Box, FMRangeList* Matches)
         UIBuildMemPool(),
         Matches
     );
-}
-
-void
-UIBoxEquipDrawBucket(UIBox* Box, DBucket* Bucket)
-{
-    Box->Kind |= UI_BOX_KIND_DRAW_BUCKET;
-
-    if (Box->DrawBucket) {
-        DEFER(DPushBucket(Box->DrawBucket), DPopBucket()) {
-            DrawSubBucket(Bucket);
-        }
-    } else {
-        Box->DrawBucket = Bucket;
-    }
 }
 
 void

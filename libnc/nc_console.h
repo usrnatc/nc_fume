@@ -87,6 +87,8 @@ EXTERN_C_LINK_BEGIN
 u32 CodePointFromInput(InputModifierKind Mods, InputKind Input);
 EXTERN_C_LINK_END
 
+INTERNAL b32 Update(void);
+
 Str8 StrFromEventKind(InputEventKind Kind);
 Str8 StrFromInputModifierInput(Arena* MemPool, InputModifierKind Modifiers, InputKind Input);
 Str8List StrListFromInputModKind(Arena* MemPool, InputModifierKind Modifiers);
@@ -98,14 +100,17 @@ InputEventList EventListCopy(Arena* MemPool, InputEventList* List);
 void EventListCat(InputEventList* Dst, InputEventList* Src);
 InputEvent* ListPush(Arena* MemPool, InputEventList* List, InputEventKind Event);
 void TerminalInit(void);
+void TerminalRelease(void);
 TerminalProperties* GetTerminalProperties(void);
 r2f32 GetConsoleRect(void);
 void SendWakeupEvent(void);
+void TerminalWrite(Str8 Bytes);
 InputEventList GetEvents(Arena* MemPool, b32 Wait);
 InputModifierKind GetModifiers(void);
 b32 KeyIsDown(InputKind Input);
 v2f32 GetMousePosition(void);
 void SetCursorKind(CursorKind Cursor);
+CursorKind GetCursorKind(void);
 Str8 GetClipboardText(Arena* MemPool);
 void SetClipboardText(Str8 String);
 

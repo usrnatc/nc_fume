@@ -3401,6 +3401,30 @@ IsDigit(u8 Char, u32 Base)
     return Result;
 }
 
+
+FMRangeList 
+ListCpy(Arena* MemPool, FMRangeList* List)
+{
+    FMRangeList Result = {};
+
+    for (FMRangeNode* SrcNode = List->Head; SrcNode; SrcNode = SrcNode->Next) {
+        FMRangeNode* DstNode = ArenaPushArrayZero(
+            MemPool,
+            FMRangeNode,
+            1
+        );
+
+        SLL_QUEUE_PUSH(Result.Head, Result.Tail, DstNode);
+        DstNode->Range = SrcNode->Range;
+    }
+
+    Result.Count = List->Count;
+    Result.StrPartCount = List->StrPartCount;
+    Result.TotalDimensions = List->TotalDimensions;
+
+    return Result;
+}
+
 API_INTERNAL u8 
 ToLower(u8 Char)
 {

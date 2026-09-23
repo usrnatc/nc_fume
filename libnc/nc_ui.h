@@ -22,6 +22,8 @@ enum UIIconKind {
     UI_ICON_KIND_UP_CARET,
     UI_ICON_KIND_CHECK_HOLLOW,
     UI_ICON_KIND_CHECK_FILLED,
+    UI_ICON_KIND_RADIO_HOLLOW,
+    UI_ICON_KIND_RADIO_FILLED,
     UI_ICON_KIND_COUNT
 };
 
@@ -363,8 +365,6 @@ struct UIAnimationInfo {
     f32 HotAnimationRate;
     f32 ActiveAnimationRate;
     f32 FocusAnimationRate;
-    f32 TooltipAnimationRate;
-    f32 MenuAnimationRate;
     f32 ScrollAnimationRate;
 };
 

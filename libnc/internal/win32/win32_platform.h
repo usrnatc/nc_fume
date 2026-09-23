@@ -54,6 +54,36 @@
 #define ENABLE_EXTENDED_FLAGS                0x0080
 
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING   0x0004
+#define ENABLE_WINDOW_INPUT                  0x0008
+#define DISABLE_NEWLINE_AUTO_RETURN          0x0008
+
+#define KEY_EVENT                            0x0001
+#define MOUSE_EVENT                          0x0002
+#define WINDOW_BUFFER_SIZE_EVENT             0x0004
+#define MENU_EVENT                           0x0008
+#define FOCUS_EVENT                          0x0010
+
+#define RIGHT_ALT_PRESSED                    0x0001
+#define LEFT_ALT_PRESSED                     0x0002
+#define RIGHT_CTRL_PRESSED                   0x0004
+#define LEFT_CTRL_PRESSED                    0x0008
+#define SHIFT_PRESSED                        0x0010
+#define ENHANCED_KEY                         0x0100
+
+#define FROM_LEFT_1ST_BUTTON_PRESSED         0x0001
+#define RIGHTMOST_BUTTON_PRESSED             0x0002
+#define FROM_LEFT_2ND_BUTTON_PRESSED         0x0004
+
+#define MOUSE_MOVED                          0x0001
+#define DOUBLE_CLICK                         0x0002
+#define MOUSE_WHEELED                        0x0004
+#define MOUSE_HWHEELED                       0x0008
+
+#define CTRL_C_EVENT                         0
+#define CTRL_BREAK_EVENT                     1
+#define CTRL_CLOSE_EVENT                     2
+#define CTRL_LOGOFF_EVENT                    5
+#define CTRL_SHUTDOWN_EVENT                  6
 
 #define INVALID_SOCKET                       (SOCKET)(~0)
 #define SOCKET_ERROR                         (-1)
@@ -2118,6 +2148,70 @@ typedef struct _OVERLAPPED {
     HANDLE hEvent;
 } OVERLAPPED, *LPOVERLAPPED;
 
+typedef struct _COORD {
+    SHORT X;
+    SHORT Y;
+} COORD, *PCOORD;
+
+typedef struct _SMALL_RECT {
+    SHORT Left;
+    SHORT Top;
+    SHORT Right;
+    SHORT Bottom;
+} SMALL_RECT, *PSMALL_RECT;
+
+typedef struct _KEY_EVENT_RECORD {
+    BOOL  bKeyDown;
+    WORD  wRepeatCount;
+    WORD  wVirtualKeyCode;
+    WORD  wVirtualScanCode;
+    union {
+        WCHAR UnicodeChar;
+        CHAR  AsciiChar;
+    } uChar;
+    DWORD dwControlKeyState;
+} KEY_EVENT_RECORD, *PKEY_EVENT_RECORD;
+
+typedef struct _MOUSE_EVENT_RECORD {
+    COORD dwMousePosition;
+    DWORD dwButtonState;
+    DWORD dwControlKeyState;
+    DWORD dwEventFlags;
+} MOUSE_EVENT_RECORD, *PMOUSE_EVENT_RECORD;
+
+typedef struct _WINDOW_BUFFER_SIZE_RECORD {
+    COORD dwSize;
+} WINDOW_BUFFER_SIZE_RECORD, *PWINDOW_BUFFER_SIZE_RECORD;
+
+typedef struct _MENU_EVENT_RECORD {
+    UINT dwCommandId;
+} MENU_EVENT_RECORD, *PMENU_EVENT_RECORD;
+
+typedef struct _FOCUS_EVENT_RECORD {
+    BOOL bSetFocus;
+} FOCUS_EVENT_RECORD, *PFOCUS_EVENT_RECORD;
+
+typedef struct _INPUT_RECORD {
+    WORD EventType;
+    union {
+        KEY_EVENT_RECORD          KeyEvent;
+        MOUSE_EVENT_RECORD        MouseEvent;
+        WINDOW_BUFFER_SIZE_RECORD WindowBufferSizeEvent;
+        MENU_EVENT_RECORD         MenuEvent;
+        FOCUS_EVENT_RECORD        FocusEvent;
+    } Event;
+} INPUT_RECORD, *PINPUT_RECORD;
+
+typedef struct _CONSOLE_SCREEN_BUFFER_INFO {
+    COORD      dwSize;
+    COORD      dwCursorPosition;
+    WORD       wAttributes;
+    SMALL_RECT srWindow;
+    COORD      dwMaximumWindowSize;
+} CONSOLE_SCREEN_BUFFER_INFO, *PCONSOLE_SCREEN_BUFFER_INFO;
+
+typedef BOOL (WINAPI *PHANDLER_ROUTINE)(DWORD CtrlType);
+
 typedef struct _devicemodeW {
     WCHAR dmDeviceName[CCHDEVICENAME];
     WORD  dmSpecVersion;
@@ -3509,6 +3603,13 @@ DLL_IMPORT                    INT                          WINAPI  GetDIBits(HDC
 DLL_IMPORT                    BOOL                         WINAPI  SetConsoleOutputCP(UINT wCodePageID);
 DLL_IMPORT                    BOOL                         WINAPI  SetConsoleCP(UINT wCodePageID);
 DLL_IMPORT                    BOOL                         WINAPI  ReadConsoleA(HANDLE hConsoleInput, LPVOID lpBuffer, DWORD nNumberofCharsToRead, LPDWORD lpNumberofCharsRead, LPVOID pInputControl);
+DLL_IMPORT                    BOOL                         WINAPI  ReadConsoleInputW(HANDLE hConsoleInput, PINPUT_RECORD lpBuffer, DWORD nLength, LPDWORD lpNumberOfEventsRead);
+DLL_IMPORT                    BOOL                         WINAPI  GetNumberOfConsoleInputEvents(HANDLE hConsoleInput, LPDWORD lpNumberOfEvents);
+DLL_IMPORT                    BOOL                         WINAPI  GetConsoleScreenBufferInfo(HANDLE hConsoleOutput, PCONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo);
+DLL_IMPORT                    BOOL                         WINAPI  SetConsoleCtrlHandler(PHANDLER_ROUTINE HandlerRoutine, BOOL Add);
+DLL_IMPORT                    HANDLE                       WINAPI  CreateEventW(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCWSTR lpName);
+DLL_IMPORT                    BOOL                         WINAPI  SetEvent(HANDLE hEvent);
+DLL_IMPORT                    DWORD                        WINAPI  WaitForMultipleObjects(DWORD nCount, HANDLE const* lpHandles, BOOL bWaitAll, DWORD dwMilliseconds);
 DLL_IMPORT                    VOID                         WSAAPI  freeaddrinfo(PADDRINFOA pAddrInfo);
 DLL_IMPORT                    INT                          WSAAPI  getaddrinfo(PCSTR pNodeName, PCSTR pServiceName, ADDRINFOA const* pHints, PADDRINFOA* ppResult);
 DLL_IMPORT                    INT                          WSAAPI  getaddrinfoW(PCWSTR pNodeName, PCWSTR pServiceName, ADDRINFOW const* pHints, PADDRINFOW* ppResult);
