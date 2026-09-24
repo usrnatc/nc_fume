@@ -134,9 +134,6 @@ FUMEAnalyse(FUMEParams* Params)
                     PRINT_STR(Paths.Data[PIndex])
                 );
             }
-
-            Str8 __foo = StrRange(Base + 0x1BEA0D2, Base + 0x1BEA0E3);
-            LogPanic(__foo);
         }
 
         LaneSyncU64(&Base, 0);
