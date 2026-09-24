@@ -216,6 +216,5 @@ The table contains the messages of the ArduPilot dialect (`ardupilotmega.xml` an
 - FUME does not decode payloads and does not test signatures.
 - A file must be 16 bytes or larger.
 - The `SYSTEM ID AND COMPONENT ID` table has 64 rows. FUME tells you how many packets did not go into the table. Note that pairs with no correct packet also use rows.
-- The `MESSAGE IDS THAT ARE NOT IN THE TABLE` list has 16 rows. FUME does not list more message IDs than that.
-- FUME does not calculate the number of lost packets from the sequence field.
+- The `MESSAGE IDS THAT ARE NOT IN THE TABLE` list has 16 rows. FUME does not list more message IDs than that, unless `--bad=` has been provided.
 - FUME does not read subdirectories.
