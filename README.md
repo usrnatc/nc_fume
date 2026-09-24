@@ -114,7 +114,7 @@ For each incorrect packet, FUME calculates if a change of one byte makes the che
 | `Incorrect` | More than one byte is incorrect, or the length byte is incorrect. |
 | `Not tested. Correct if CRC_EXTRA is 117.` | The message ID is not in the table. FUME shows the `CRC_EXTRA` value that makes the checksum correct. |
 
-This result is a calculation. However It is not a proof, a pack  with many incorrect bytes can, by chance, look like a packet with one incorrect byte.
+This result is a calculation. However It is not a proof, a packet  with many incorrect bytes can, by chance, look like a packet with one incorrect byte.
 
 ### LOST PACKETS
 
