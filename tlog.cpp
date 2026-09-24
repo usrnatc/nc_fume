@@ -87,6 +87,36 @@ TLOGFindRecord(u8* Base, u64 Size, u64 Offset, u64 Limit)
     return Result;
 }
 
+u64
+TLOGFindHiddenPacket(u8 *Base, u64 Size, u64 Offset, u64 Limit)
+{
+    u64 Result = Limit;
+
+    for ( ; Offset < Limit; ++Offset) {
+        u8* Ptr = Base + Offset;
+
+        if (
+            !MAVLINK_IS_MAGIC(*Ptr) ||
+            (Offset + MAVLINK_FRAME_SIZE_MIN > Size) ||
+            (Offset + MAVLinkFrameSizeFromPtr(Ptr) > Size)
+        ) {
+            continue;
+        }
+
+        MAVLinkFrame Frame = MAVLinkFrameFromPtr(Ptr);
+        u16 Extra = 0;
+
+        if (
+            MAVLinkFrameKindFromFrame(&Frame, &Extra) == MAVLINK_FRAME_KIND_OKAY
+        ) {
+            Result = Offset;
+            break;
+        }
+    }
+
+    return Result;
+}
+
 INTERNAL TLOGRecord
 TLOGRecordFromOffset(u8* Base, u64 Size, u64 Offset)
 {
@@ -243,6 +273,41 @@ TLOGWalk(
             ++Stats->JunkRuns;
         }
 
+        if (
+            UNLIKELY(
+                !Record.IsPacket || 
+                Record.Kind != MAVLINK_FRAME_KIND_OKAY
+            )
+        ) {
+            u64 End = Offset + Record.Size;
+            u64 Hidden = TLOGFindHiddenPacket(
+                Base, 
+                Size, 
+                Offset + TLOG_TIMESTAMP_SIZE + 1, 
+                End
+            );
+            u64 HiddenCount = 0;
+            u64 Tail = End;
+
+            while (Hidden < End) {
+                ++HiddenCount;
+                Tail = Hidden + MAVLinkFrameSizeFromPtr(Base + Hidden);
+                Hidden = TLOGFindHiddenPacket(Base, Size, Tail, End);
+            }
+
+            if (HiddenCount) {
+                Stats->HiddenCount += HiddenCount;
+                ++Stats->HidingCount;
+                Stats->CutOffCount += (
+                    Tail < End &&
+                    MAVLINK_IS_MAGIC(Base[Tail])
+                );
+
+                if (Lane->HidingCount < ProblemsMax)
+                    Lane->Hiding[Lane->HidingCount++] = Offset;
+            }
+        }
+
         if (UNLIKELY(IsProblem) && Lane->ProblemsCount < ProblemsMax) {
             TLOGProblem* Problem = &Lane->Problems[Lane->ProblemsCount++];
 
@@ -369,6 +434,9 @@ TLOGStatsMerge(TLOGStats* Dst, TLOGStats* Src)
     Dst->TimeGapsCount += Src->TimeGapsCount;
     Dst->TimeGapMaxUSecs = MAX(Dst->TimeGapMaxUSecs, Src->TimeGapMaxUSecs);
     Dst->BadAfterTimeGapCount += Src->BadAfterTimeGapCount;
+    Dst->HiddenCount += Src->HiddenCount;
+    Dst->HidingCount += Src->HidingCount;
+    Dst->CutOffCount += Src->CutOffCount;
 
     if (Src->HeadTime) {
         if (!Dst->HeadTime) {
@@ -645,13 +713,17 @@ TLOGReportPacketHeader(Arena* MemPool, OUT Str8List* Strings)
 }
 
 internal void
-TLOGReportPacket(Arena* MemPool, OUT Str8List* Strings, u8* Base, u64 Offset)
-{
-    MAVLinkFrame Frame = MAVLinkFrameFromPtr(Base + Offset + TLOG_TIMESTAMP_SIZE);
+TLOGReportFrame(
+    Arena* MemPool, 
+    OUT Str8List* Strings, 
+    u64 Offset, 
+    u8* Ptr, 
+    Str8 Time
+) {
+    MAVLinkFrame Frame = MAVLinkFrameFromPtr(Ptr);
     u16 Extra = 0;
     MAVLinkFrameKind Kind = MAVLinkFrameKindFromFrame(&Frame, &Extra);
     Str8 OffsetStr = ArenaPushStrFmt(MemPool, "0x%llX", Offset);
-    Str8 Time = TLOGStrFromUSecs(MemPool, SwapByteOrder(*(u64*) (Base + Offset)));
     Str8 Msg = (Frame.MsgSlot != MAVLINK_MSG_SLOT_NONE)
         ? ArenaPushStrFmt(MemPool, "%S (%u)", PRINT_STR(MAVLINK_MSG_NAMES[Frame.MsgSlot]), Frame.MsgID)
         : ArenaPushStrFmt(MemPool, "Not in table (%u)", Frame.MsgID);
@@ -710,6 +782,23 @@ TLOGReportPacket(Arena* MemPool, OUT Str8List* Strings, u8* Base, u64 Offset)
 
         ListPush(MemPool, Strings, "\n"_s8);
     }
+}
+
+internal void
+TLOGReportPacket(Arena* MemPool, OUT Str8List* Strings, u8* Base, u64 Offset)
+{
+    Str8 Time = TLOGStrFromUSecs(
+        MemPool, 
+        SwapByteOrder(*(u64*) (Base + Offset))
+    );
+
+    TLOGReportFrame(
+        MemPool,
+        Strings,
+        Offset,
+        Base + Offset + TLOG_TIMESTAMP_SIZE,
+        Time
+    );
 }
 
 internal void
@@ -1146,7 +1235,11 @@ TLOGReport(
         );
         TLOGReportPacketHeader(MemPool, Strings);
 
-        for (u64 LIndex = 0; LIndex < LanesCount && Remaining; ++LIndex) {
+        for (
+            u64 LIndex = 0; 
+            LIndex < LanesCount && Remaining; 
+            ++LIndex
+        ) {
             TLOGLane* Lane = &Lanes[LIndex];
 
             for (
@@ -1174,6 +1267,126 @@ TLOGReport(
                     );
                 } else {
                     TLOGReportPacket(MemPool, Strings, Base, Problem->Offset);
+                }
+            }
+        }
+    }
+
+    if (Stats->HiddenCount) {
+        u64 Remaining = ProblemsMax;
+        Str8 HiddenString = TLOGStrFromCount(MemPool, Stats->HiddenCount);
+        Str8 HidingString = TLOGStrFromCount(MemPool, Stats->HidingCount);
+        Str8 CutOffString = TLOGStrFromCount(MemPool, Stats->CutOffCount);
+        Str8 ShownString = TLOGStrFromCount(
+            MemPool, 
+            MIN(ProblemsMax, Stats->HidingCount)
+        );
+
+        TLOGReportHeading(MemPool, Strings, "LOST PACKETS");
+        ListPushFmt(
+            MemPool,
+            Strings,
+            "    An incorrect packet can have a length that is too large. The bytes of correct packets are then\n"
+            "    in the incorrect packet, and the last packet in it can be cut off. Bytes that are not in a record\n"
+            "    can also have correct packets in them. FUME does not count these packets in the tables above\n\n"
+            "    Correct packets that are in incorrect packets:       %S\n"
+            "    Packets that are cut off at the end of these:        %S\n"
+            "    Incorrect packets that have correct packets in them: %S\n",
+            PRINT_STR(HiddenString),
+            PRINT_STR(CutOffString),
+            PRINT_STR(HidingString)
+        );
+
+        if (ProblemsMax) {
+            ListPushFmt(
+                MemPool,
+                Strings,
+                "\n    The first %S of %S incorrect packets, each followed by the correct packets in it:\n",
+                PRINT_STR(ShownString),
+                PRINT_STR(HidingString)
+            );
+            TLOGReportPacketHeader(MemPool, Strings);
+        }
+
+        for (
+            u64 LIndex = 0;
+            LIndex < LanesCount && Remaining;
+            ++LIndex
+        ) {
+            TLOGLane* Lane = &Lanes[LIndex];
+
+            for (
+                u64 HIndex = 0;
+                HIndex < Lane->HidingCount && Remaining;
+                ++HIndex, --Remaining
+            ) {
+                u64 Offset = Lane->Hiding[HIndex];
+                TLOGRecord Record = TLOGRecordFromOffset(Base, Size, Offset);
+                u64 End = Offset + Record.Size;
+
+                if (Record.IsPacket) {
+                    ListPush(MemPool, Strings, TLOG_STYLES[TLOG_STYLE_BAD]);
+                    TLOGReportPacket(MemPool, Strings, Base, Offset);
+                } else {
+                    Str8 OffsetString = ArenaPushStrFmt(
+                        MemPool,
+                        "0x%llX",
+                        Offset
+                    );
+
+                    ListPushFmt(
+                        MemPool,
+                        Strings,
+                        "    %S%-12S %llu bytes that are not in a record%S\n",
+                        PRINT_STR(TLOG_STYLES[TLOG_STYLE_BAD]),
+                        PRINT_STR(OffsetString),
+                        Record.Size,
+                        PRINT_STR(TLOG_STYLES[TLOG_STYLE_RESET])
+                    );
+                }
+
+                u64 Hidden = TLOGFindHiddenPacket(
+                    Base,
+                    Size,
+                    Offset + TLOG_TIMESTAMP_SIZE + 1,
+                    End
+                );
+                u64 Tail = End;
+
+                while (Hidden < End) {
+                    ListPush(
+                        MemPool,
+                        Strings,
+                        TLOG_STYLES[TLOG_STYLE_DIM]
+                    );
+                    TLOGReportFrame(
+                        MemPool,
+                        Strings,
+                        Hidden,
+                        Base + Hidden,
+                        "No timestamp"_s8
+                    );
+
+                    Tail = Hidden + MAVLinkFrameSizeFromPtr(Base + Hidden);
+                    Hidden = TLOGFindHiddenPacket(Base, Size, Tail, End);
+                }
+
+                if (Tail < End && MAVLINK_IS_MAGIC(Base[Tail])) {
+                    Str8 TailString = ArenaPushStrFmt(
+                        MemPool,
+                        "0x%llX",
+                        Tail
+                    );
+
+                    ListPushFmt(
+                        MemPool,
+                        Strings,
+                        "    %S%-12S %llu bytes of a packet that is cut off%S\n",
+                        PRINT_STR(TLOG_STYLES[TLOG_STYLE_DIM]),
+                        PRINT_STR(TailString),
+                        End - Tail,
+                        PRINT_STR(TLOG_STYLES[TLOG_STYLE_RESET])
+                    );
                 }
             }
         }

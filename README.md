@@ -31,7 +31,7 @@ You can give FUME files, directories, or the two together. For a directory, FUME
 | Option | Function |
 | --- | --- |
 | `--threads=N` | The number of threads. The range is 1 to 256. The default is the number of logical processors. |
-| `--bad=N` | The number of problems that the report lists for each file. The default is 16. `--bad=0` removes the list. |
+| `--bad=N` | The number of problems that the report lists for each file, and the number of incorrect packets in the `LOST PACKETS` list. The default is 16. `--bad=0` removes the lists. |
 | `--msgs` | Adds a table of the correct and incorrect packets for each message. |
 | `--dump` | Adds one line for each packet, in the sequence that the packets have in the file. FUME does not show payloads. |
 | `--no-colour` | Removes the colour codes from the report. |
@@ -117,6 +117,38 @@ For each incorrect packet, FUME calculates if a change of one byte makes the che
 | `Not tested. Correct if CRC_EXTRA is 117.` | The message ID is not in the table. FUME shows the `CRC_EXTRA` value that makes the checksum correct. |
 
 This result is a calculation. However It is not a proof, a pack  with many incorrect bytes can, by chance, look like a packet with one incorrect byte.
+
+### LOST PACKETS
+
+When a length byte is incorrect and too large, the GCS reads too many bytes as one packet. The bytes of the correct packets that follow are then inside the incorrect packet. The GCS did not decode these packets and did not write a timestamp for them. They are not in the tables above, and they were not on the screen of the GCS.
+
+FUME finds these packets. It examines each byte inside an incorrect packet, and inside each block of bytes that are not in a record. A byte is the start of a correct packet if it has a MAVLink magic value, the length after it fits, and the checksum is correct. FUME calculates the checksum, so a chance result is rare: approximately 1 in 10 million bytes.
+
+| Line | Meaning |
+| --- | --- |
+| Correct packets that are in incorrect packets | The number of correct packets that FUME found inside incorrect packets and inside blocks of bytes that are not in a record. |
+| Packets that are cut off at the end of these | After the last correct packet, some bytes can remain before the end of the incorrect packet. If they start with a magic value, they are the start of one more packet. The GCS did not write the end of that packet. FUME counts one cut off packet for each such incorrect packet. |
+| Incorrect packets that have correct packets in them | The number of incorrect packets and blocks that contain one correct packet or more. |
+
+Below the counts is a list. `--bad=N` sets the number of incorrect packets in the list. Each incorrect packet is one red line. The correct packets inside it are grey lines below it. If a packet is cut off, the last line shows the number of its bytes that are in the file.
+
+The correct packets in the list have `No timestamp` in the `TIMESTAMP` column, because the GCS did not write one. The `OFFSET` column of these lines is the offset of the magic byte of the packet. It is not the offset of a timestamp.
+
+```
+    0x1938BAB    2026-09-24 01:16:02.243187    133         1        0  Not in table (41473)     253  Not tested. Correct if CRC_EXTRA is 0.
+    0x1938BB4    No timestamp                    1         1      133  FENCE_STATUS (162)         1  Correct
+    0x1938BC1    No timestamp                    1         1      134  WIND (168)                 8  Correct
+    0x1938BD5    No timestamp                    1         1      135  RANGEFINDER (173)          4  Correct
+    0x1938CA2    39 bytes of a packet that is cut off
+```
+
+How to read the list:
+
+- The sequence numbers of the correct packets are consecutive. This shows that they are real packets from one sender.
+- The header of the incorrect packet is usually made of the bytes of the first correct packet, moved by one byte or more. In the example, the length 253 is `0xFD`, the magic byte of the first correct packet, and the system ID 133 is its sequence number. Here the link added one byte before a correct packet. The GCS read the added byte as a magic byte.
+- An incorrect packet can also be the end of a packet that lost its start. Its header then contains the last fields of that packet, for example the callsign of an `ADSB_VEHICLE` message. The packet that ate the start of that packet is usually the incorrect packet before it. In such a chain, one damage event causes more than one incorrect packet.
+
+This section is not in the report if FUME found no packet inside an incorrect packet.
 
 ### CAUSE OF THE INCORRECT CHECKSUMS
 

@@ -98,6 +98,9 @@ struct TLOGStats {
     u64              TimeGapMaxUSecs;
     u64              BadAfterTimeGapCount;
     u64              HeadTime;
+    u64              HiddenCount;
+    u64              HidingCount;
+    u64              CutOffCount;
     u64              TailTime;
     r1u64            TimeRange;
     MAVLinkFrameKind HeadTimeKind;
@@ -108,6 +111,8 @@ struct TLOGLane {
     u64          DumpHeadLine;
     TLOGProblem* Problems;
     u64          ProblemsCount;
+    u64*         Hiding;
+    u64          HidingCount;
     TLOGStats    Stats;
 };
 
@@ -123,6 +128,7 @@ void TLOGReportRule(Arena* MemPool, Str8List* Out);
 INTERNAL b32 TLOGTimeIsSane(u64 USecs);
 INTERNAL b32 TLOGIsRecordHead(u8* Base, u64 Size, u64 Offset);
 u64 TLOGFindRecord(u8* Base, u64 Size, u64 Offset, u64 Limit);
+u64 TLOGFindHiddenPacket(u8* Base, u64 Size, u64 Offset, u64 Limit);
 void TLOGWalk(u8* Base, u64 Size, u64 Offset, u64 Limit, TLOGLane* Lane, u64 ProblemsMax);
 void TLOGStatsMerge(TLOGStats* Dst, TLOGStats* Src);
 Str8 TLOGStrFromUSecs(Arena* MemPool, u64 USecs);

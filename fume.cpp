@@ -94,6 +94,11 @@ FUMEAnalyse(FUMEParams* Params)
                 TLOGProblem,
                 Params->ProblemsMax
             );
+            Lanes[LIndex].Hiding = ArenaPushArray(
+                Scratch.MemPool,
+                u64,
+                Params->ProblemsMax
+            );
         }
     }
 
@@ -129,6 +134,9 @@ FUMEAnalyse(FUMEParams* Params)
                     PRINT_STR(Paths.Data[PIndex])
                 );
             }
+
+            Str8 __foo = StrRange(Base + 0x1BEA0D2, Base + 0x1BEA0E3);
+            LogPanic(__foo);
         }
 
         LaneSyncU64(&Base, 0);
@@ -137,10 +145,12 @@ FUMEAnalyse(FUMEParams* Params)
         if (Base) {
             TLOGLane* Lane = &Lanes[LaneIndex()];
             TLOGProblem* Problems = Lane->Problems;
+            u64* Hiding = Lane->Hiding;
             r1u64 Range = LaneRange(Size);
 
             MemZero(Lane, sizeof(*Lane));
             Lane->Problems = Problems;
+            Lane->Hiding = Hiding;
             Lane->HeadOffset = Range.Min
                 ? TLOGFindRecord(Base, Size, Range.Min, Range.Max)
                 : 0;
