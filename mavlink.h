@@ -5,13 +5,14 @@
 #include "nc_string.h"
 
 // @defines____________________________________________________________________
-#define MAVLINK_MAGIC_VERSION_1       0xFE
-#define MAVLINK_MAGIC_VERSION_2       0xFD
+#define MAVLINK_MAGIC_VERSION_1       0xFEU
+#define MAVLINK_MAGIC_VERSION_2       0xFDU
 #define MAVLINK_HEADER_SIZE_VERSION_1 6
 #define MAVLINK_HEADER_SIZE_VERSION_2 10
 #define MAVLINK_CRC_SIZE              2
 #define MAVLINK_SIGNATURE_SIZE        13
 #define MAVLINK_FRAME_SIZE_MIN        (MAVLINK_HEADER_SIZE_VERSION_1 + MAVLINK_CRC_SIZE)
+#define MAVLINK_FRAME_SIZE_MAX        (MAVLINK_HEADER_SIZE_VERSION_2 + U8_MAX + MAVLINK_CRC_SIZE + MAVLINK_SIGNATURE_SIZE)
 #define MAVLINK_IFLAG_SIGNED          0x01
 #define MAVLINK_CRC_SEED              U16_MAX
 #define MAVLINK_CRC_POLYNOMIAL        0x8408
@@ -20,7 +21,18 @@
 #define MAVLINK_MSG_SLOT_NONE         U16_MAX
 #define MAVLINK_EXTRA_NONE            0x0100
 
-#define MAVLINK_IS_MAGIC(X) ((u8) ((X) - MAVLINK_MAGIC_VERSION_2) <= 1)
+#define MAVLINK_IS_MAGIC(X)    ((u8) ((X) - MAVLINK_MAGIC_VERSION_2) <= 1)
+#define MAVLINK_CRC_STEP(X, Y) (((X) >> 8) ^ MAVLINK_CRC_TABLE[0][((X) ^ (Y)) & U8_MAX])
+
+#define MAVLINK_HEARTBEAT_TYPE             4
+#define MAVLINK_HEARTBEAT_AUTOPILOT        5
+#define MAVLINK_SYS_STATUS_DROP_RATE_COMM 18
+#define MAVLINK_SYS_STATUS_ERRORS_COMM    20
+#define MAVLINK_SYSTEM_TIME_UNIX_USEC      0
+#define MAVLINK_RADIO_STATUS_RX_ERRORS     0
+#define MAVLINK_RADIO_STATUS_FIXED         2
+#define MAVLINK_RADIO_STATUS_RSSI          4
+#define MAVLINK_RADIO_STATUS_NOISE         7
 
 #define MAVLINK_MSG_XLIST                                     \
     X(    0,  50, HEARTBEAT)                                  \
@@ -346,6 +358,7 @@ enum : u8 {
 
 typedef u8 MAVLinkField;
 enum : u8 {
+    MAVLINK_FIELD_LENGTH,
     MAVLINK_FIELD_INCOMPAT_FLAGS,
     MAVLINK_FIELD_COMPAT_FLAGS,
     MAVLINK_FIELD_SEQ,
@@ -353,8 +366,17 @@ enum : u8 {
     MAVLINK_FIELD_COMP_ID,
     MAVLINK_FIELD_MSG_ID,
     MAVLINK_FIELD_PAYLOAD,
-    MAVLINK_FIELD_NONE,
     MAVLINK_FIELD_COUNT
+};
+
+typedef u8 MAVLinkFixKind;
+enum : u8 {
+    MAVLINK_FIX_KIND_CHANGE,
+    MAVLINK_FIX_KIND_LOSS,
+    MAVLINK_FIX_KIND_ADDITION,
+    MAVLINK_FIX_KIND_NONE,
+    MAVLINK_FIX_KIND_NO_FRAME,
+    MAVLINK_FIX_KIND_COUNT
 };
 
 // @types______________________________________________________________________
@@ -371,9 +393,11 @@ struct MAVLinkFrame {
     u8               CompID;
 };
 
-struct MAVLinkByteFix {
-    MAVLinkField Field;
-    u8           Original;
+struct MAVLinkFix {
+    MAVLinkFixKind Kind;
+    MAVLinkField   Field;
+    u8             Value;
+    u16            Index;
 };
 
 // @runtime____________________________________________________________________
@@ -389,9 +413,11 @@ extern const Str8 MAVLINK_FIELD_NAMES[MAVLINK_FIELD_COUNT];
 void MAVLinkInit(void);
 INTERNAL u32 MAVLinkFrameSizeFromPtr(u8* Ptr);
 INTERNAL MAVLinkFrame MAVLinkFrameFromPtr(u8* Ptr);
-INTERNAL u16 MAVLinkCRC(u8* Ptr, u64 Size);
+INTERNAL u16 MAVLinkCRC(u32 Seed, u8* Ptr, u64 Size);
+INTERNAL u32 MAVLinkCRCBack(u32 CRC, u32 Byte);
 INTERNAL u16 MAVLinkExtraFromCRC(u16 CRC, u16 Target);
 INTERNAL MAVLinkFrameKind MAVLinkFrameKindFromFrame(MAVLinkFrame* Frame, OUT u16* Extra);
-MAVLinkByteFix MAVLinkByteFixFromFrame(MAVLinkFrame* Frame);
+INTERNAL u64 MAVLinkPayloadFromFrame(MAVLinkFrame* Frame, u32 Index, u32 Size);
+MAVLinkFix MAVLinkFixFromFrame(MAVLinkFrame* Frame, u8* End);
 
 #endif // __MAVLINK_H__

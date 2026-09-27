@@ -34,5 +34,6 @@ b32 MemCmp(void const* Ptr1, void const* Ptr2, u64 Size);
 void* MemMove(void* _Dst, void const* _Src, u64 N);
 void EnableMaxMemorySpace(void);
 b32 MemIsZero(void* _Ptr, u64 Size);
+void MemPrefetch(void* Ptr, u64 Size);
 
 #endif // __NC_MEMORY_H__

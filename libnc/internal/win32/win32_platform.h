@@ -3207,6 +3207,11 @@ typedef struct _WSAOVERLAPPED {
     WSAEVENT hEvent;
 } WSAOVERLAPPED, *LPWSAOVERLAPPED;
 
+typedef struct _WIN32_MEMORY_RANGE_ENTRY {
+    void* VirtualAddresses;
+    sz    NumberOfBytes;
+} WIN32_MEMORY_RANGE_ENTRY;
+
 typedef struct _ACTCTXW {
     ULONG   cbSize;
     DWORD   dwFlags;
@@ -3303,6 +3308,7 @@ DLL_IMPORT                    HANDLE                       WINAPI  OpenFileMappi
 DLL_IMPORT                    BOOL                         WINAPI  CloseHandle(HANDLE hObject);
 DLL_IMPORT                    LPVOID                       WINAPI  MapViewOfFile(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, SIZE_T dwNumberOfBytesToMap);
 DLL_IMPORT                    BOOL                         WINAPI  UnmapViewOfFile(LPCVOID lpBaseAddress);
+DLL_IMPORT                    BOOL                         WINAPI  PrefetchVirtualMemory(HANDLE hProcess, sz NumberOfEntries, WIN32_MEMORY_RANGE_ENTRY* VirtualAddresses, u32 Flags);
 DLL_IMPORT                    BOOL                         WINAPI  QueryPerformanceFrequency(LARGE_INTEGER* lpFrequency);
 DLL_IMPORT                    BOOL                         WINAPI  QueryPerformanceCounter(LARGE_INTEGER* lpPerformanceCount);
 DLL_IMPORT                    VOID                         WINAPI  ExitProcess(DWORD dwExitCode);

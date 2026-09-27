@@ -26,6 +26,17 @@ MemReserveLarge(u64 Size)
     );
 }
 
+void
+MemPrefetch(void *Ptr, u64 Size)
+{
+    WIN32_MEMORY_RANGE_ENTRY Range = {
+        Ptr,
+        (sz) Size
+    };
+
+    PrefetchVirtualMemory(GetCurrentProcess(), 1, &Range, 0);
+}
+
 b32 
 MemCommit(void* Ptr, u64 Size)
 {
