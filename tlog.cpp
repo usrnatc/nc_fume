@@ -350,11 +350,19 @@ TLOGWalk(
     TLOGSource* Source = NULL;
     u16 SourceKey = 0;
     u64 PartSize = (Size / TLOG_PARTS_COUNT) + 1;
+    u64 PartIndex = Offset / PartSize;
+    u64 PartEnd = (PartIndex + 1) * PartSize;
+    TLOGPart* Part = &Stats->Parts[PartIndex];
     u64 PrevTime = 0;
 
     while (Offset < Limit) {
         TLOGRecord Record = TLOGRecordFromOffset(Base, Size, Offset);
-        TLOGPart* Part = &Stats->Parts[Offset / PartSize];
+
+        if (UNLIKELY(Offset >= PartEnd)) {
+            PartIndex = Offset / PartSize;
+            PartEnd = (PartIndex + 1) * PartSize;
+            Part = &Stats->Parts[PartIndex];
+        }
         TLOGRecordKind Kind = Record.Kind;
         b32 IsProblem = (
             Kind == TLOG_RECORD_KIND_BAD_CRC || 
