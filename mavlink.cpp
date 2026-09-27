@@ -29,14 +29,14 @@ const Str8 MAVLINK_MSG_NAMES[MAVLINK_MSG_COUNT] = {
 #undef X
 
 const Str8 MAVLINK_FIELD_NAMES[MAVLINK_FIELD_COUNT] = {
+    Str8Lit("the length"),
     Str8Lit("the incompatibility flags"),
     Str8Lit("the compatibility flags"),
     Str8Lit("the sequence"),
     Str8Lit("the system ID"),
     Str8Lit("the component ID"),
     Str8Lit("the message ID"),
-    Str8Lit("the payload"),
-    Str8Lit("none")
+    Str8Lit("the payload")
 };
 
 void 
@@ -128,9 +128,9 @@ MAVLinkFrameFromPtr(u8* Ptr)
 }
 
 INTERNAL u16 
-MAVLinkCRC(u8* Ptr, u64 Size)
+MAVLinkCRC(u32 Seed, u8* Ptr, u64 Size)
 {
-    u32 Result = MAVLINK_CRC_SEED;
+    u32 Result = Seed;
     u8* PtrEnd = Ptr + Size;
 
     for ( ; Ptr + 8 <= PtrEnd; Ptr += 8) {
@@ -148,11 +148,21 @@ MAVLinkCRC(u8* Ptr, u64 Size)
         );
     }
 
-    for ( ; Ptr < PtrEnd; ++Ptr) {
-        Result = (Result >> 8) ^ MAVLINK_CRC_TABLE[0][(Result ^ *Ptr) & U8_MAX];
-    }
+    for ( ; Ptr < PtrEnd; ++Ptr)
+        Result = MAVLINK_CRC_STEP(Result, *Ptr);
 
     return (u16) Result;
+}
+
+INTERNAL u32
+MAVLinkCRCBack(u32 CRC, u32 Byte)
+{
+    u32 Slot = MAVLINK_CRC_REVERSE[CRC >> 8];
+    u32 Result = (
+        (((CRC ^ MAVLINK_CRC_TABLE[0][Slot]) & U8_MAX) << 8) | (Slot ^ Byte)
+    );
+
+    return Result;
 }
 
 INTERNAL u16 
@@ -176,11 +186,11 @@ MAVLinkFrameKindFromFrame(MAVLinkFrame* Frame, OUT u16* Extra)
     MAVLinkFrameKind Result = MAVLINK_FRAME_KIND_BAD_CRC;
     u8* CRCPtr = Frame->Ptr + 1 + Frame->CRCSize;
     u32 Target = (u32) (*CRCPtr | CRCPtr[1] << 8);
-    u32 CRC = MAVLinkCRC(Frame->Ptr + 1, Frame->CRCSize);
+    u32 CRC = MAVLinkCRC(MAVLINK_CRC_SEED, Frame->Ptr + 1, Frame->CRCSize);
 
     if (LIKELY(Frame->MsgSlot != MAVLINK_MSG_SLOT_NONE)) {
         *Extra = MAVLINK_MSG_EXTRAS[Frame->MsgSlot];
-        CRC = (CRC >> 8) ^ MAVLINK_CRC_TABLE[0][(CRC ^ *Extra) & U8_MAX];
+        CRC = MAVLINK_CRC_STEP(CRC, *Extra);
 
         if (CRC == Target)
             Result = MAVLINK_FRAME_KIND_OKAY;
@@ -194,54 +204,134 @@ MAVLinkFrameKindFromFrame(MAVLinkFrame* Frame, OUT u16* Extra)
     return Result;
 }
 
-MAVLinkByteFix
-MAVLinkByteFixFromFrame(MAVLinkFrame* Frame)
+INTERNAL u64
+MAVLinkPayloadFromFrame(MAVLinkFrame *Frame, u32 Index, u32 Size)
 {
-    MAVLinkByteFix Result = {};
+    u64 Result = 0;
+    u8* Payload = Frame->Ptr + 1 + Frame->CRCSize - Frame->PayloadSize;
 
-    Result.Field = MAVLINK_FIELD_NONE;
+    for (u32 I = 0; I < Size && Index + I < Frame->PayloadSize; ++I)
+        Result |= (u64) Payload[Index + I] << (I << 3);
 
-    if (Frame->MsgSlot == MAVLINK_MSG_SLOT_NONE)
-        return Result;
+    return Result;
+}
 
+MAVLinkFix
+MAVLinkFixFromFrame(MAVLinkFrame *Frame, u8 *End)
+{
+    MAVLinkFix Result = {};
+    u8* Ptr = Frame->Ptr;
+    u64 Size = (u64) (End - Ptr);
     b32 IsVersion2 = !!(Frame->Flag & MAVLINK_FRAME_FLAG_IS_VERSION_2);
     u32 SeqIndex = IsVersion2 ? 4 : 2;
-    u32 PayloadIndex = IsVersion2 
-        ? MAVLINK_HEADER_SIZE_VERSION_2 
+    u32 PayloadIndex = IsVersion2
+        ? MAVLINK_HEADER_SIZE_VERSION_2
         : MAVLINK_HEADER_SIZE_VERSION_1;
-    u8* CRCPtr = Frame->Ptr + 1 + Frame->CRCSize;
-    u32 Target = (u32) (*CRCPtr | CRCPtr[1] << 8);
-    u32 CRC = MAVLinkCRC(Frame->Ptr + 1, Frame->CRCSize);
+    u32 TailSize = Frame->Size - PayloadIndex - Frame->PayloadSize;
+    u32 CRCSize = Frame->CRCSize;
 
-    CRC = (CRC >> 8) ^ MAVLINK_CRC_TABLE[0][(CRC ^ MAVLINK_MSG_EXTRAS[Frame->MsgSlot]) & U8_MAX];
+    Result.Kind = MAVLINK_FIX_KIND_NONE;
 
-    u32 Diff = CRC ^ Target;
+    if (
+        Frame->MsgSlot == MAVLINK_MSG_SLOT_NONE || 
+        Size < PayloadIndex + TailSize
+    ) {
+        return Result;
+    }
 
-    for (u32 Index = Frame->CRCSize; Index >= 2; --Index) {
-        u32 Slot = MAVLINK_CRC_REVERSE[Diff >> 8];
+    u32 Extra = MAVLINK_MSG_EXTRAS[Frame->MsgSlot];
 
-        Diff = (((Diff ^ MAVLINK_CRC_TABLE[0][Slot]) & U8_MAX) << 8) | Slot;
+    if (Size == Frame->Size) {
+        u8* CRCPtr = Ptr + CRCSize + 1;
+        u32 Target = (u32) (*CRCPtr | CRCPtr[1] << 8);
+        u32 CRC = MAVLinkCRC(MAVLINK_CRC_SEED, Ptr + 1, CRCSize);
+        u32 Diff = MAVLINK_CRC_STEP(CRC, Extra) ^ Target;
 
-        u32 Delta = MAVLINK_CRC_REVERSE[Diff >> 8];
+        for (
+            u32 Index = CRCSize; 
+            Index >= 2 && Result.Kind == MAVLINK_FIX_KIND_NONE; 
+            --Index
+        ) {
+            Diff = MAVLinkCRCBack(Diff, 0);
 
-        if (MAVLINK_CRC_TABLE[0][Delta] != Diff)
-            continue;
+            u32 Delta = MAVLINK_CRC_REVERSE[Diff >> 8];
 
-        if (Index >= PayloadIndex) {
-            Result.Field = MAVLINK_FIELD_PAYLOAD;
-        } else if (Index >= SeqIndex + 3) {
-            Result.Field = MAVLINK_FIELD_MSG_ID;
-        } else if (Index >= SeqIndex) {
-            Result.Field = (MAVLinkField) (
-                MAVLINK_FIELD_SEQ + (Index - SeqIndex)
+            if (MAVLINK_CRC_TABLE[0][Delta] != Diff)
+                continue;
+
+            Result.Kind = MAVLINK_FIX_KIND_CHANGE;
+            Result.Value = (u8) (Ptr[Index] ^ Delta);
+
+            if (Index >= PayloadIndex) {
+                Result.Field = MAVLINK_FIELD_PAYLOAD;
+            } else if (Index >= SeqIndex + 3) {
+                Result.Field = MAVLINK_FIELD_MSG_ID;
+            } else if (Index >= SeqIndex) {
+                Result.Field = (MAVLinkField) (
+                    MAVLINK_FIELD_SEQ + (Index - SeqIndex)
+                );
+            } else {
+                Result.Field = (Index == 2)
+                    ? MAVLINK_FIELD_INCOMPAT_FLAGS
+                    : MAVLINK_FIELD_COMPAT_FLAGS;
+            }
+        }
+    } else if (Size + 1 == Frame->Size || Size == Frame->Size + 1) {
+        b32 IsLoss = (Size + 1 == Frame->Size);
+        u32 Last = IsLoss ? CRCSize : CRCSize + 1;
+        u8* CRCPtr = Ptr + CRCSize + (!IsLoss * 2);
+        u32 Target = (u32) (*CRCPtr | CRCPtr[1] << 8);
+        u32 CRC = MAVLINK_CRC_STEP(MAVLINK_CRC_SEED, Ptr[1]);
+        u32 Back[MAVLINK_FRAME_SIZE_MAX];
+
+        Back[Last] = MAVLinkCRCBack(Target, Extra);
+
+        for (u32 Index = Last; Index > 2; --Index) {
+            Back[Index - 1] = MAVLinkCRCBack(
+                Back[Index],
+                 IsLoss ? Ptr[Index - 1] : Ptr[Index]
             );
-        } else {
-            Result.Field = (Index == 2) 
-                ? MAVLINK_FIELD_INCOMPAT_FLAGS 
-                : MAVLINK_FIELD_COMPAT_FLAGS;
         }
 
-        Result.Original = (u8) (Frame->Ptr[Index] ^ Delta);
+        for (
+            u32 Index = 2; 
+            Index <= Last; 
+            CRC = MAVLINK_CRC_STEP(CRC, Ptr[Index]), ++Index
+        ) {
+            if (IsLoss) {
+                u32 Mixed = Back[Index] ^ (CRC >> 8);
+                u32 Slot = MAVLINK_CRC_REVERSE[Mixed >> 8];
+
+                if (MAVLINK_CRC_TABLE[0][Slot] == Mixed) {
+                    Result.Kind = MAVLINK_FIX_KIND_LOSS;
+                    Result.Index = (u16) Index;
+                    Result.Value = (u8) (Slot ^ (CRC & U8_MAX));
+                    break;
+                }
+            } else if (CRC == Back[Index]) {
+                Result.Kind = MAVLINK_FIX_KIND_ADDITION;
+                Result.Index = (u16) Index;
+                break;
+            }
+        }
+    } else {
+        u64 PayloadSize = Size - PayloadIndex - TailSize;
+
+        if (PayloadSize <= U8_MAX) {
+            u8* CRCPtr = Ptr + PayloadIndex + PayloadSize;
+            u32 Target = (u32) (*CRCPtr | CRCPtr[1] << 8);
+            u32 CRC = MAVLinkCRC(
+                MAVLINK_CRC_STEP(MAVLINK_CRC_SEED, (u32) PayloadSize),
+                Ptr + 2,
+                PayloadIndex - 2 + PayloadSize
+            );
+
+            if (MAVLINK_CRC_STEP(CRC, Extra) == Target) {
+                Result.Kind = MAVLINK_FIX_KIND_CHANGE;
+                Result.Field = MAVLINK_FIELD_LENGTH;
+                Result.Value = (u8) PayloadSize;
+            }
+        }
     }
 
     return Result;

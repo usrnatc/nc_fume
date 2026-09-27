@@ -42,6 +42,12 @@ MemReserveLarge(u64 Size)
     return Result;
 }
 
+void
+MemPrefetch(void *Ptr, u64 Size)
+{
+    madvise(Ptr, Size, MADV_WILLNEED);
+}
+
 b32 
 MemCommit(void* Ptr, u64 Size)
 {
