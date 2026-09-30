@@ -70,12 +70,21 @@ struct RendState {
     RendColourMode ColourMode;
     RendGrid       Buffer;
     RendGrid       BackBuffer;
-    b32            IsFrontValid;
+    b32            IsBufferValid;
     r2i32          Clip;
     RendCaret      Caret;
     u32            ForegroundColour;
     u32            BackgroundColour;
     u64            PrevFrameBytes;
+};
+
+struct RendEmit {
+    u8*   Curr;
+    u8*   End;
+    v2i32 Cursor;
+    u32   ForegroundColour;
+    u32   BackgroundColour;
+    u32   Attributes;
 };
 
 // @runtime____________________________________________________________________

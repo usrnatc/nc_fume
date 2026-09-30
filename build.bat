@@ -46,11 +46,18 @@ set BSWAPASMOutputObj=win32_bswap.obj
 set MATHASMOutputObj=win32_math.obj
 set INTRINASMOutputObj=win32_intrin.obj
 
-set SourceFiles=..\fume.cpp
+REM set SourceFiles=..\fume.cpp
 
-set OutputExe=fume.exe
-set OutputPdb=fume.pdb
-set OutputMap=fume.map
+REM set OutputExe=fume.exe
+REM set OutputPdb=fume.pdb
+REM set OutputMap=fume.map
+
+
+set SourceFiles=..\tester.cpp
+
+set OutputExe=tester.exe
+set OutputPdb=tester.pdb
+set OutputMap=tester.map
 
 set SharedCompilerFlags=^
     /nologo /FC /WX /W4 /GR- /Gm- /EHa- /EHsc- /Zl ^
@@ -62,7 +69,8 @@ set SharedCompilerFlags=^
     /I"..\libnc" /I"..\libnc\external" /I"..\libnc\internal" /I"..\libnc\cache"^
     /DUNICODE /D_NO_CRT_STDIO_INLINE /D_CRT_SECURE_NO_WARNINGS ^
     /wd4018 /wd4100 /wd4189 /wd4200 /wd4201 /wd4211 /wd4244 ^
-    /wd4245 /wd4334 /wd4456 /wd4505 /wd4714 /wd4146 /wd4716
+    /wd4245 /wd4334 /wd4456 /wd4505 /wd4714 /wd4146 /wd4716 ^
+    /wd4389
 
 set SharedLinkerFlags=^
     /MANIFEST:EMBED %SubSystem% /NOEXP /NODEFAULTLIB ^
