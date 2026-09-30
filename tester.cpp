@@ -86,6 +86,24 @@ TestHandleEvents(TestState* State, InputEventList* Events)
 
                 if (Event->Kind == EVENT_KIND_PRESS && Event->Input == INPUT_KIND_SPACE)
                     State->ShouldAnimate = !State->ShouldAnimate;
+
+                if (Event->Kind == EVENT_KIND_PRESS && Event->Input == INPUT_KIND_FUNC_2) {
+                    Str8List Parts = {};
+
+                    for (u64 Index = 0; Index < REND_STATE->PrevFrame.Size; ++Index) {
+                        u8 Byte = REND_STATE->PrevFrame.Str[Index];
+
+                        if (Byte == 0x1B)
+                            ListPush(Scratch.MemPool, &Parts, "\n\\e"_s8);
+                        else
+                            ListPush(Scratch.MemPool, &Parts, Str(&REND_STATE->PrevFrame.Str[Index], 1));
+                    }
+
+                    WriteFileContents("smoke_frame.txt"_s8, StrListJoin(Scratch.MemPool, &Parts, NULL));
+                }
+
+                if (Event->Kind == EVENT_KIND_PRESS && Event->Input == INPUT_KIND_FUNC_3)
+                    REND_STATE->IsBufferValid = FALSE;
             } break;
 
             case EVENT_KIND_TEXT: {

@@ -76,6 +76,7 @@ struct RendState {
     u32            ForegroundColour;
     u32            BackgroundColour;
     u64            PrevFrameBytes;
+    Str8           PrevFrame;
 };
 
 struct RendEmit {

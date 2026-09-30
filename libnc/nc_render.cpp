@@ -549,9 +549,9 @@ EmitColour(RendEmit* Emit, b32* First, u32 Colour, b32 IsBg)
         case REND_COLOUR_MODE_TRUE: {
             EmitParam(Emit, First, IsBg ? 48 : 38);
             EmitParam(Emit, First, 2);
+            EmitParam(Emit, First, (Colour >> 24) & 0xFF);
             EmitParam(Emit, First, (Colour >> 16) & 0xFF);
             EmitParam(Emit, First, (Colour >> 8) & 0xFF);
-            EmitParam(Emit, First, Colour & 0xFF);
         } break;
 
         case REND_COLOUR_MODE_256: {
@@ -747,7 +747,8 @@ RendEndFrame(void)
 
     EmitLit(&Emit, "\x1b[?2026l");
     State->PrevFrameBytes = (u64) (Emit.Curr - Start);
-    TerminalWrite(Str(Start, State->PrevFrameBytes));
+    State->PrevFrame = Str(Start, State->PrevFrameBytes);
+    TerminalWrite(State->PrevFrame);
 
     RendGrid Swap = State->Buffer;
 
