@@ -47,11 +47,11 @@ enum : u32 {
 #define UINamedTableVectorFmt(...)     DEFER(UINamedTableVectorBegin(__VA_ARGS__), UINamedTableVectorEnd())
 #define UITableVector()                DEFER(UITableVectorBegin(), UITableVectorEnd())
 #define UITableCell()                  DEFER(UITableCellBegin(), UITableCellEnd())
-#define UITableCellSized(X)            DEFER(UITableCellSizedBegin(), UITableCellSizedEnd())
+#define UITableCellSized(X)            DEFER(UITableCellSizedBegin((X)), UITableCellEnd())
 #define UIScrollList(X, Y, Z, W, I, J) DEFER(UIScrollListBegin((X), (Y), (Z), (W), (I), (J)), UIScrollListEnd())
 #define UIRadioGroup(X, Y, Z)          DEFER(UIRadioGroupBegin((X), (Y), (Z)), UIRadioGroupEnd())
 #define UITreeNode(X, Y, Z)            DEFER(UITreeNodeBegin((X), (Y), (Z)), UITreeNodeEnd())
-#define UIBreadCrumb(X, Y)             DEFER(UIBreadCrumBegin((X), (Y)), UIBreadCrumbEnd())
+#define UIBreadCrumb(X, Y)             DEFER(UIBreadCrumbBegin((X), (Y)), UIBreadCrumbEnd())
 
 // @types______________________________________________________________________
 struct UIScrollListRowBlock {

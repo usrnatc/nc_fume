@@ -1285,7 +1285,7 @@ UIScrollListBegin(
                                 ? Params->CursorRange.Min.X + !!Params->CursorMinIsEmptySelection[AXIS_2D_X] 
                                 : CursorPosition.X
                     );
-                    CursorPosition.Y = (
+                    CursorPosition.Y += (
                         (Evt->DeltaI32.Y > 0) 
                         ? +(NumPossibleVisibleRows - 3) 
                         : (Evt->DeltaI32.Y < 0) 
