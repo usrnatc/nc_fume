@@ -26,6 +26,7 @@ struct ThreadLocalStorage {
     struct UIScrollPoint*    UIScrollListScrollPointPtr;
     struct ThreadContext*    LOCAL_THREAD_CTX;
     struct UIState*          UI_STATE;
+    struct ConfigContext*    CFG_CTX;
     Arena*                   ARENA_THREAD_SCRATCH_POOL[ARENA_SCRATCH_COUNT];
 };
 

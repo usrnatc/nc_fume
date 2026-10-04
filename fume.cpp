@@ -414,9 +414,446 @@ FUMELaneEntryPoint(void* Params)
     FUMEAnalyse(LaneParams->Params);
 }
 
+struct FUMEFilesViewState {
+    v2i64 Cursor;
+    v2i64 Mark;
+};
+ 
+void
+AppViewUI(r2f32 Rect)
+{
+    ConfigNode* View = ConfigNodeFromID(Registers()->View);
+    AppViewState* VS = AppViewStateFromConfig(View);
+    Str8 ViewName = View->String;
+    ConfigNode* QueryRoot = ConfigNodeChildFromStr(View, "query"_s8);
+    ConfigNode* InputRoot = ConfigNodeChildFromStr(QueryRoot, "input"_s8);
+    ConfigNode* CmdRoot = ConfigNodeChildFromStr(QueryRoot, "cmd"_s8);
+    Str8 CurrentInput = InputRoot->Head->String;
+ 
+    if (VS->QueryIsOpen) {
+        Str8 CommandName = CmdRoot->Head->String;
+        AppCommandKindInfo* CommandInfo = AppCommandKindInfoFromStr(CommandName);
+ 
+        VS->QueryStringSize = MIN(sizeof(VS->QueryBuffer), CurrentInput.Size);
+        MemCpy(
+            VS->QueryBuffer,
+            CurrentInput.Str,
+            VS->QueryStringSize
+        );
+ 
+        if (!VS->QueryCursor.Column) {
+            VS->QueryMark = TxtPt(1, 1);
+            VS->QueryCursor = TxtPt(1, VS->QueryStringSize + 1);
+        }
+ 
+        Rect.Y0 += 1.0f;
+ 
+        UIBox* SearchRow = EMPTY_UI_BOX_VALUE;
+ 
+        UITag("pop"_s8) {
+            UISetNextChildLayoutAxis(AXIS_2D_X);
+            SearchRow = UIBuildBoxFromStr(
+                UI_BOX_KIND_DRAW_BACKGROUND,
+                "###search"_s8
+            );
+ 
+            UIParent(SearchRow) {
+                UIFocus(VS->QueryIsOpen && !VS->ContentsAreFocused ? UI_FOCUS_KIND_ON : UI_FOCUS_KIND_OFF) {
+                    if (CommandName.Size) {
+                        UIPreferredWidth(UI_TEXT_DIM(2.0f, 1.0f)) {
+                            UILabel(CommandInfo->DisplayName);
+                        }
+                    }
+ 
+                    UIWidthFill() {
+                        UISignal Sig = UILineEdit(
+                            &VS->QueryCursor,
+                            &VS->QueryMark,
+                            VS->QueryBuffer,
+                            sizeof(VS->QueryBuffer),
+                            &VS->QueryStringSize,
+                            CurrentInput,
+                            "###search_edit"_s8
+                        );
+ 
+                        if (UI_PRESSED(Sig)) {
+                            VS->QueryIsOpen = TRUE;
+                            VS->ContentsAreFocused = FALSE;
+                            AppCmd(APP_COMMAND_KIND_FOCUS_PANEL);
+                        }
+                    }
+                }
+            }
+        }
+ 
+        if (!VS->ContentsAreFocused)
+            APP_STATE->TextEditMode = TRUE;
+ 
+        if (InputRoot == EMPTY_CFG_NODE_VALUE) {
+            InputRoot = ConfigNodeChildFromStrOrAlloc(
+                APP_STATE->Config,
+                QueryRoot,
+                "input"_s8
+            );
+        }
+ 
+        ConfigNodeNewReplace(
+            APP_STATE->Config,
+            InputRoot,
+            Str(VS->QueryBuffer, VS->QueryStringSize)
+        );
+    }
+ 
+    for (
+        UIEvent* Evt = NULL;
+        UINextEvent(&Evt);
+    ) {
+        if (
+            Evt->Kind == UI_EVENT_KIND_PRESS &&
+            Evt->Input == INPUT_KIND_LEFT_MOUSE_BTN &&
+            InRange(Rect, Evt->Position)
+        ) {
+            VS->ContentsAreFocused = TRUE;
+            break;
+        }
+    }
+ 
+    UIBox* ViewContainer = EMPTY_UI_BOX_VALUE;
+ 
+    UIWidthFill() {
+        UIHeightFill() {
+            UISetNextChildLayoutAxis(AXIS_2D_Y);
+            ViewContainer = UIBuildBoxFromKey(0, EMPTY_UI_KEY_VALUE);
+        }
+    }
+ 
+    UIParent(ViewContainer) {
+        UIFocus(VS->QueryIsOpen && !VS->ContentsAreFocused ? UI_FOCUS_KIND_OFF : UI_FOCUS_KIND_NULL) {
+            if (StrMatch(ViewName, "files"_s8, 0)) {
+                TempArena Scratch = GetScratch(NULL, 0);
+                FUMEFilesViewState* State = GetAppViewState(FUMEFilesViewState);
+                ConfigNodePtrList FileList = ConfigNodeTopLevelListFromStr(
+                    Scratch.MemPool,
+                    "file"_s8
+                );
+                ConfigNodePtrArray Files = ConfigNodePtrArrayFromList(
+                    Scratch.MemPool,
+                    &FileList
+                );
+                UIScrollPoint2D ScrollPosition = AppViewScrollPosition();
+ 
+                State->Cursor.Y = MIN(State->Cursor.Y, (i64) Files.Count);
+                State->Mark = State->Cursor;
+ 
+                if (!Files.Count) {
+                    UIPadding(UI_PERCENT(1.0f, 0.0f)) {
+                        UIWidthFill() {
+                            UITextAlignment(UI_TEXT_ALIGN_CENTRE) {
+                                UITag("weak"_s8) {
+                                    UILabel("There are no files in the list."_s8);
+                                    UILabel("Press Ctrl+O to open a tlog file or a folder. You can also drop files into the terminal."_s8);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    UIScrollListParameters Params = {};
+                    UIScrollListSignal ListSig = {};
+                    r1i64 Visible = {};
+                    Str8 AcceptedPath = {};
+ 
+                    Params.Kind = UI_SCROLL_LIST_KIND_ALL;
+                    Params.DimensionsPX = Length(Rect);
+                    Params.RowHeightPX = 1.0f;
+                    Params.CursorRange.Max.Y = (i64) Files.Count;
+                    Params.ItemRange = Rng((i64) 0, (i64) Files.Count);
+                    Params.CursorMinIsEmptySelection[AXIS_2D_Y] = TRUE;
+ 
+                    UIFocus(UI_FOCUS_KIND_ON) {
+                        UIScrollList(
+                            &Params,
+                            &ScrollPosition.Y,
+                            &State->Cursor,
+                            &State->Mark,
+                            &Visible,
+                            &ListSig
+                        ) {
+                            for (
+                                i64 Row = Visible.Min;
+                                Row <= Visible.Max && Row < (i64) Files.Count;
+                                ++Row
+                            ) {
+                                Str8 Path = Files.V[Row]->Head->String;
+                                b32 IsCursor = (State->Cursor.Y == Row + 1);
+ 
+                                UITag(IsCursor ? "pop"_s8 : ""_s8) {
+                                    UISetNextChildLayoutAxis(AXIS_2D_X);
+ 
+                                    UIBox* RowBox = UIBuildBoxFromStrFmt(
+                                        (
+                                            UI_BOX_KIND_MOUSE_CLICKABLE |
+                                            UI_BOX_KIND_DRAW_BACKGROUND |
+                                            UI_BOX_KIND_DRAW_HOT_EFFECTS
+                                        ),
+                                        "###file_row_%p",
+                                        Files.V[Row]
+                                    );
+ 
+                                    UIParent(RowBox) {
+                                        UIWidthFill() {
+                                            UILabel(Path);
+                                        }
+                                    }
+ 
+                                    UISignal RowSig = UISignalFromBox(RowBox);
+ 
+                                    if (UI_PRESSED(RowSig)) {
+                                        State->Cursor.Y = Row + 1;
+                                        State->Mark = State->Cursor;
+                                    }
+ 
+                                    if (UI_DOUBLE_CLICKED(RowSig))
+                                        AcceptedPath = Path;
+                                }
+                            }
+                        }
+ 
+                        if (
+                            UIIsFocusActive() &&
+                            State->Cursor.Y > 0 &&
+                            UISlotPress(UI_EVENT_ACTION_SLOT_ACCEPT)
+                        ) {
+                            AcceptedPath = Files.V[State->Cursor.Y - 1]->Head->String;
+                        }
+                    }
+ 
+                    // NOTE(nc): the selected file goes to the registers, thus
+                    //         : the commands that need a file work from this view
+                    if (State->Cursor.Y > 0) {
+                        Registers()->FilePath = ArenaPushStrCpy(
+                            AppFrameMemPool(),
+                            Files.V[State->Cursor.Y - 1]->Head->String
+                        );
+                    }
+ 
+                    if (AcceptedPath.Size) {
+                        AppCmd(
+                            APP_COMMAND_KIND_OPEN_REPORT,
+                            __Registers.FilePath = AcceptedPath
+                        );
+                    }
+                }
+ 
+                ScrollPosition.Y.Offset = 0.0f;
+                AppStoreViewScrollPosition(ScrollPosition);
+                ReleaseScratch(Scratch);
+            } else if (StrMatch(ViewName, "pending"_s8, 0)) {
+                // NOTE(nc): the view asks for the first bytes of the file. When
+                //         : the file stream has them, the tab changes to the report
+                Str8 FilePath = AppViewFilePath();
+                CKey Key = FSKeyFromPathRange(FilePath, Rng((u64) 0, (u64) KB(4)), 0);
+                u128 KeyHash = CHashFromKey(Key, 0);
+ 
+                AppStoreViewLoadingInfo(TRUE, 0, 0);
+ 
+                if (KeyHash != u128{}) {
+                    ConfigNodeEquipStr(
+                        APP_STATE->Config,
+                        View,
+                        APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_OPEN_REPORT].String
+                    );
+ 
+                    for (
+                        AppArenaExt* Ext = VS->HeadArenaExt;
+                        Ext;
+                        Ext = Ext->Next
+                    ) {
+                        ArenaRelease(Ext->MemPool);
+                    }
+ 
+                    ArenaPopTo(VS->MemPool, VS->MemPoolResetPosition);
+                    VS->UserData = NULL;
+                    VS->HeadArenaExt = NULL;
+                    VS->TailArenaExt = NULL;
+                    AppRequestFrame();
+                }
+            } else {
+                // TODO(nc): report, incorrect packets, lost packets, all packets,
+                // TODO    : messages and sources views. They need the TLI
+                TempArena Scratch = GetScratch(NULL, 0);
+                FancyStrList Title = AppTitleFStrFromConfig(Scratch.MemPool, View);
+ 
+                UIPadding(UI_PERCENT(1.0f, 0.0f)) {
+                    UIWidthFill() {
+                        UITextAlignment(UI_TEXT_ALIGN_CENTRE) {
+                            UIBox* TitleBox = UIBuildBoxFromKey(UI_BOX_KIND_DRAW_TEXT, {});
+ 
+                            UIBoxEquipDisplayFancyStrs(TitleBox, &Title);
+ 
+                            UITag("weak"_s8) {
+                                UILabel("FUME does not have this view yet."_s8);
+                            }
+                        }
+                    }
+                }
+ 
+                ReleaseScratch(Scratch);
+            }
+        }
+    }
+ 
+    if (VS->QueryIsOpen) {
+        UIFocus(UI_FOCUS_KIND_ON) {
+            if (UIIsFocusActive() && UISlotPress(UI_EVENT_ACTION_SLOT_CANCEL)) {
+                VS->QueryIsOpen = FALSE;
+                VS->QueryStringSize = 0;
+            }
+ 
+            if (UIIsFocusActive() && UISlotPress(UI_EVENT_ACTION_SLOT_ACCEPT)) {
+                Str8 CommandName = AppViewQueryCommand();
+                Str8 Input = Str(VS->QueryBuffer, VS->QueryStringSize);
+                AppCommandKindInfo* CommandKindInfo = AppCommandKindInfoFromStr(
+                    CommandName
+                );
+ 
+                AppRegistersScope() {
+                    AppRegistersFillSlotFromStr(
+                        CommandKindInfo->Query.Slot,
+                        ""_s8,
+                        Input
+                    );
+                    AppCmd(APP_COMMAND_KIND_COMPLETE_QUERY);
+                }
+            }
+        }
+    }
+ 
+    VS->LastFrameIndexBuilt = APP_STATE->FrameIndex;
+}
+ 
+internal void
+AsyncThreadEntryPoint(void* Params)
+{
+    LaneContext LaneCtx = *(LaneContext*) Params;
+ 
+    SetLaneContext(LaneCtx);
+    GetTLS()->IS_ASYNC_THREAD = TRUE;
+    ThreadSetName("[ASYNC %llu]", LaneIndex());
+ 
+    for (;;) {
+        if (!LaneIndex()) {
+            if (!AtomicLoadU32(&ASYNC_LOOP_REPEAT, MEM_ORDER_SEQ_CST)) {
+                LOCK_SCOPE(ASYNC_TICK_BEGIN_MTX) {
+                    CondVarWait(
+                        ASYNC_TICK_BEGIN_COND_VAR,
+                        ASYNC_TICK_BEGIN_MTX,
+                        TimeNow() + SECONDS(1)
+                    );
+                }
+            }
+ 
+            AtomicExchangeU32(&ASYNC_LOOP_REPEAT, 0, MEM_ORDER_SEQ_CST);
+            AtomicExchangeU32(&ASYNC_LOOP_REPEAT_HIGH_PRIORITY, 0, MEM_ORDER_SEQ_CST);
+        }
+ 
+        LaneSync();
+        OCAsyncTick();
+        CAsyncTick();
+        FSAsyncTick();
+        LogAsyncTick();
+        LaneSync();
+ 
+        b32 ShouldQuit = FALSE;
+ 
+        if (!LaneIndex())
+            ShouldQuit = AtomicLoadU32(&GLOBAL_ASYNC_EXIT, MEM_ORDER_SEQ_CST);
+ 
+        LaneSyncU64(&ShouldQuit, 0);
+ 
+        if (ShouldQuit)
+            break;
+    }
+}
+ 
+internal void
+FUMEInteractive(CommandLine* CLI)
+{
+    TempArena Scratch = GetScratch(NULL, 0);
+ 
+    ASYNC_TICK_BEGIN_COND_VAR = CondVarAlloc();
+    ASYNC_TICK_BEGIN_MTX = MutexAlloc();
+    ASYNC_TICK_END_MTX = MutexAlloc();
+ 
+    OCInit();
+    CInit();
+    FSInit();
+    MDInit();
+    ConfigInit();
+    MAVLinkInit();
+    TerminalInit();
+    RendInit(CLI);
+    DrawInit();
+    UIInit();
+ 
+    Handle* AsyncThreads = NULL;
+    u64 LaneBroadcastValue = 0;
+    u64 MainThreadCount = 1;
+    u64 AsyncThreadsCount = GetSystemProperties()->LogicalProcessorCount;
+    u64 MainThreadCountClamped = MIN(AsyncThreadsCount, MainThreadCount);
+ 
+    AsyncThreadsCount -= MainThreadCountClamped;
+ 
+    Str8 AsyncThreadsCountString = CommandLineString(CLI, "threads"_s8);
+ 
+    if (AsyncThreadsCountString.Size)
+        AsyncThreadsCount = U64FromStr(AsyncThreadsCountString);
+ 
+    AsyncThreadsCount = CLAMP(1, AsyncThreadsCount, FUME_MAX_LANE_COUNT);
+ 
+    Handle Barrier = BarrierAlloc(AsyncThreadsCount);
+    LaneContext* LaneCtxs = ArenaPushArrayZero(
+        Scratch.MemPool,
+        LaneContext,
+        AsyncThreadsCount
+    );
+ 
+    ASYNC_THREADS_COUNT = AsyncThreadsCount;
+    AsyncThreads = ArenaPushArrayZero(Scratch.MemPool, Handle, ASYNC_THREADS_COUNT);
+ 
+    for (u64 Index = 0; Index < ASYNC_THREADS_COUNT; ++Index) {
+        LaneCtxs[Index].Index = Index;
+        LaneCtxs[Index].Count = ASYNC_THREADS_COUNT;
+        LaneCtxs[Index].Barrier = Barrier;
+        LaneCtxs[Index].BroadcastMemory = &LaneBroadcastValue;
+        AsyncThreads[Index] = ThreadLaunch(AsyncThreadEntryPoint, &LaneCtxs[Index]);
+    }
+ 
+    AppInit(CLI);
+ 
+    for (; !APP_STATE->ShouldQuit; )
+        AppFrame();
+ 
+    AtomicIncFetchU32(&GLOBAL_ASYNC_EXIT, MEM_ORDER_SEQ_CST);
+    CondVarBroadcast(ASYNC_TICK_BEGIN_COND_VAR);
+ 
+    for (u32 Index = 0; Index < ASYNC_THREADS_COUNT; ++Index)
+        ThreadJoin(AsyncThreads[Index], U64_MAX);
+ 
+    BarrierRelease(Barrier);
+    RendRelease();
+    TerminalRelease();
+    ReleaseScratch(Scratch);
+}
+
 void 
 EntryPoint(CommandLine* CLI)
 {
+    if (CommandLineHasFlag(CLI, "tui"_s8)) {
+        FUMEInteractive(CLI);
+ 
+        return;
+    }
+
     if (
         !CLI->Inputs.Count || 
         CommandLineHasFlag(CLI, "help"_s8) ||
@@ -437,6 +874,7 @@ EntryPoint(CommandLine* CLI)
             "\t             Bytes that are not in a record are always counted.\n"
             "\t--extract=F  Write the bytes in --offset to the file F. Use with one input file only.\n"
             "\t--no-colour  Do not use colour in the report.\n"
+            "\t--tui        Show the files in the interactive screen. Input files are optional.\n"
             "\t--help\n"
             "\t--h\n"
             "\t--?          Show this usage message and quit\n",

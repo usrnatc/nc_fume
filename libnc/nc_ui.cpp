@@ -79,7 +79,11 @@ __UIAnimate(UIKey Key, UIAnimationParameters Params)
             if (Node) {
                 SLL_STACK_POP_EX(UI_STATE->FreeAnimationNode, SlotNext);
             } else {
-                Node = ArenaPushArrayZero(UI_STATE->MemPool, UIAnimationNode, 1);
+                Node = ArenaPushArrayZero(
+                    UI_STATE->MemPool, 
+                    UIAnimationNode, 
+                    1
+                );
                 Node->SlotNext = EMPTY_ANIMATION_NODE_VALUE;
                 Node->SlotPrev = EMPTY_ANIMATION_NODE_VALUE;
                 Node->LRUNext = EMPTY_ANIMATION_NODE_VALUE;
@@ -90,15 +94,36 @@ __UIAnimate(UIKey Key, UIAnimationParameters Params)
             Node->Key = Key;
             MemCpy(&Node->Params, &Params, sizeof(Node->Params));
             Node->Current = Params.Initial;
-            DLL_PUSH_BACK_EX(EMPTY_ANIMATION_NODE_VALUE, Slot->Head, Slot->Tail, Node, SlotNext, SlotPrev);
+            DLL_PUSH_BACK_EX(
+                EMPTY_ANIMATION_NODE_VALUE, 
+                Slot->Head, 
+                Slot->Tail, 
+                Node, 
+                SlotNext, 
+                SlotPrev
+            );
         } else {
-            DLL_REMOVE_EX(EMPTY_ANIMATION_NODE_VALUE, UI_STATE->LRUAnimationNode, UI_STATE->MRUAnimationNode, Node, LRUNext, LRUPrev);
+            DLL_REMOVE_EX(
+                EMPTY_ANIMATION_NODE_VALUE, 
+                UI_STATE->LRUAnimationNode, 
+                UI_STATE->MRUAnimationNode, 
+                Node, 
+                LRUNext, 
+                LRUPrev
+            );
         }
     }
 
     if (Node != EMPTY_ANIMATION_NODE_VALUE) {
         Node->LastTouchedBuildIndex = UI_STATE->BuildIndex;
-        DLL_PUSH_BACK_EX(EMPTY_ANIMATION_NODE_VALUE, UI_STATE->LRUAnimationNode, UI_STATE->MRUAnimationNode, Node, LRUNext, LRUPrev);
+        DLL_PUSH_BACK_EX(
+            EMPTY_ANIMATION_NODE_VALUE, 
+            UI_STATE->LRUAnimationNode, 
+            UI_STATE->MRUAnimationNode, 
+            Node, 
+            LRUNext, 
+            LRUPrev
+        );
 
         if (Params.Reset)
             Node->Current = Params.Initial;
@@ -111,8 +136,12 @@ __UIAnimate(UIKey Key, UIAnimationParameters Params)
         if (Node->Params.Rate == 0.0f)
             Node->Params.Rate = UI_STATE->DefaultAnimationRate;
 
-        if (Node->Params.Rate == 1.0f || AbsF32(Node->Current - Node->Params.Target) < AbsF32(Node->Params.Epsilon))
+        if (
+            Node->Params.Rate == 1.0f || 
+            AbsF32(Node->Current - Node->Params.Target) < AbsF32(Node->Params.Epsilon)
+        ) {
             Node->Current = Node->Params.Target;
+        }
     }
 
     return Node->Current;
@@ -263,7 +292,13 @@ UISingleLineTextOpFromEvent(
         case UI_EVENT_DELTA_STRIDE_CHAR: {} break;
 
         case UI_EVENT_DELTA_STRIDE_WORD: {
-            Delta.X = (i32) UIScannedColumnFromColumn(String, Cursor.Column, Delta.X > 0 ? SIDE_MAX : SIDE_MIN) - Cursor.Column;
+            Delta.X = (i32) UIScannedColumnFromColumn(
+                String, 
+                Cursor.Column, 
+                Delta.X > 0 
+                    ? SIDE_MAX 
+                    : SIDE_MIN
+            ) - Cursor.Column;
         } break;
 
         case UI_EVENT_DELTA_STRIDE_LINE:
@@ -278,9 +313,13 @@ UISingleLineTextOpFromEvent(
                 }
             }
 
-            i64 HomeDestinationColumn = (Cursor.Column == FirstNonWhitespaceColumn) ? 1 : FirstNonWhitespaceColumn;
+            i64 HomeDestinationColumn = (Cursor.Column == FirstNonWhitespaceColumn) 
+                ? 1 
+                : FirstNonWhitespaceColumn;
 
-            Delta.X = (Delta.X > 0) ? ((i64) String.Size + 1 - Cursor.Column) : (HomeDestinationColumn - Cursor.Column);
+            Delta.X = (Delta.X > 0) 
+                ? ((i64) String.Size + 1 - Cursor.Column) 
+                : (HomeDestinationColumn - Cursor.Column);
         } break;
     }
 
@@ -305,7 +344,13 @@ UISingleLineTextOpFromEvent(
 
     if (Event->Flags & UI_EVENT_FLAG_COPY) {
         if (Cursor.Line == Mark.Line) {
-            Copy = StrSub(String, Rng((u64) (Cursor.Column - 1), (u64) (Mark.Column - 1)));
+            Copy = StrSub(
+                String, 
+                Rng(
+                    (u64) (Cursor.Column - 1), 
+                    (u64) (Mark.Column - 1)
+                )
+            );
             OpKind |= UI_TEXT_OP_KIND_COPY;
         } else {
             OpKind |= UI_TEXT_OP_KIND_INVALID;
@@ -333,15 +378,34 @@ UISingleLineTextOpFromEvent(
     if (Event->String.Size) {
         Range = TxtRng(Cursor, Mark);
         Replace = ArenaPushStrCpy(MemPool, Event->String);
-        NextCursor = TxtPt(Range.Min.Line, Range.Min.Column + Event->String.Size);
-        NextMark = TxtPt(Range.Min.Line, Range.Min.Column + Event->String.Size);
+        NextCursor = TxtPt(
+            Range.Min.Line, 
+            Range.Min.Column + Event->String.Size
+        );
+        NextMark = TxtPt(
+            Range.Min.Line, 
+            Range.Min.Column + Event->String.Size
+        );
     }
 
-    if (NextCursor.Column > String.Size + 1 || NextCursor.Column < 1 || Event->DeltaI32.Y != 0)
+    if (
+        NextCursor.Column > String.Size + 1 || 
+        NextCursor.Column < 1 || 
+        Event->DeltaI32.Y != 0
+    ) {
         OpKind |= UI_TEXT_OP_KIND_INVALID;
+    }
 
-    NextCursor.Column = CLAMP(1, NextCursor.Column, String.Size + Replace.Size + 1);
-    NextMark.Column = CLAMP(1, NextMark.Column, String.Size + Replace.Size + 1);
+    NextCursor.Column = CLAMP(
+        1, 
+        NextCursor.Column, 
+        String.Size + Replace.Size + 1
+    );
+    NextMark.Column = CLAMP(
+        1, 
+        NextMark.Column, 
+        String.Size + Replace.Size + 1
+    );
 
     UITextOp Result = {};
 
@@ -429,7 +493,12 @@ UIScrollPointAlloc(i64 Index, f32 Offset)
 void 
 UIScrollPointTargetIndex(UIScrollPoint* Scroll, i64 Index)
 {
-    Scroll->Offset = FMod(Scroll->Offset, 1.0f) + (f32) (Scroll->Index + (i64) Scroll->Offset - Index);
+    Scroll->Offset = (
+        FMod(Scroll->Offset, 1.0f) + 
+        (f32) (
+            Scroll->Index + (i64) Scroll->Offset - Index
+        )
+    );
     Scroll->Index = Index;
 }
 
@@ -456,8 +525,20 @@ UIBoxRecordDF(
         Result.PushCount = 1;
     } else {
         for (UIBox* B = Box; !IsUIBoxEmpty(B) && B != Root; B = B->Parent) {
-            if (!IsUIBoxEmpty(*MEMBER_FROM_OFFSET(UIBox**, B, SiblingMemberOffset))) {
-                Result.Next = *MEMBER_FROM_OFFSET(UIBox**, B, SiblingMemberOffset);
+            if (
+                !IsUIBoxEmpty(
+                    *MEMBER_FROM_OFFSET(
+                        UIBox**, 
+                        B, 
+                        SiblingMemberOffset
+                    )
+                )
+            ) {
+                Result.Next = *MEMBER_FROM_OFFSET(
+                    UIBox**, 
+                    B, 
+                    SiblingMemberOffset
+                );
                 break;
             }
 
@@ -598,7 +679,9 @@ Arena*
 UIBuildMemPool(void)
 {
     UIState* UI_STATE = GetTLS()->UI_STATE;
-    Arena* Result = UI_STATE->BuildMemPools[UI_STATE->BuildIndex % ARRAY_COUNT(UI_STATE->BuildMemPools)];
+    Arena* Result = UI_STATE->BuildMemPools[
+        UI_STATE->BuildIndex % ARRAY_COUNT(UI_STATE->BuildMemPools)
+    ];
 
     return Result;
 }
@@ -641,7 +724,10 @@ UINextEvent(UIEvent** Event)
 
             if (
                 !(Permissions & UI_PERMISSION_KIND_CLICKS_LEFT) &&
-                (Node->V.Kind == UI_EVENT_KIND_PRESS || Node->V.Kind == UI_EVENT_KIND_RELEASE) &&
+                (
+                    Node->V.Kind == UI_EVENT_KIND_PRESS || 
+                    Node->V.Kind == UI_EVENT_KIND_RELEASE
+                ) &&
                 (Node->V.Input == INPUT_KIND_LEFT_MOUSE_BTN)
             ) {
                 PermissionsOK = FALSE;
@@ -650,7 +736,10 @@ UINextEvent(UIEvent** Event)
 
             if (
                 !(Permissions & UI_PERMISSION_KIND_CLICKS_MIDDLE) &&
-                (Node->V.Kind == UI_EVENT_KIND_PRESS || Node->V.Kind == UI_EVENT_KIND_RELEASE) &&
+                (
+                    Node->V.Kind == UI_EVENT_KIND_PRESS || 
+                    Node->V.Kind == UI_EVENT_KIND_RELEASE
+                ) &&
                 (Node->V.Input == INPUT_KIND_MIDDLE_MOUSE_BTN)
             ) {
                 PermissionsOK = FALSE;
@@ -658,7 +747,10 @@ UINextEvent(UIEvent** Event)
 
             if (
                 !(Permissions & UI_PERMISSION_KIND_CLICKS_RIGHT) &&
-                (Node->V.Kind == UI_EVENT_KIND_PRESS || Node->V.Kind == UI_EVENT_KIND_RELEASE) &&
+                (
+                    Node->V.Kind == UI_EVENT_KIND_PRESS || 
+                    Node->V.Kind == UI_EVENT_KIND_RELEASE
+                ) &&
                 (Node->V.Input == INPUT_KIND_RIGHT_MOUSE_BTN)
             ) {
                 PermissionsOK = FALSE;
@@ -667,7 +759,10 @@ UINextEvent(UIEvent** Event)
             if (
                 !(Permissions & UI_PERMISSION_KIND_SCROLL_X) &&
                 (Node->V.Kind == UI_EVENT_KIND_SCROLL) &&
-                (Node->V.DeltaF32.X != 0.0f || Node->V.Modifiers == INPUT_MOD_KIND_SHIFT)
+                (
+                    Node->V.DeltaF32.X != 0.0f || 
+                    Node->V.Modifiers == INPUT_MOD_KIND_SHIFT
+                )
             ) {
                 PermissionsOK = FALSE;
             }
@@ -693,11 +788,17 @@ UINextEvent(UIEvent** Event)
                     Node->V.Input != INPUT_KIND_RIGHT_MOUSE_BTN
                 )
             ) {
-                if ((Permissions & UI_PERMISSION_KIND_KEYBRD) == UI_PERMISSION_KIND_KEYBRD_SECONDARY)
+                if (
+                    (Permissions & UI_PERMISSION_KIND_KEYBRD) == UI_PERMISSION_KIND_KEYBRD_SECONDARY
+                ) {
                     PermissionsOK = !!(Node->V.Flags & UI_EVENT_FLAG_SECONDARY);
-                else if (!(Permissions & UI_PERMISSION_KIND_KEYBRD))
+                } else if (!(Permissions & UI_PERMISSION_KIND_KEYBRD)) {
                     PermissionsOK = FALSE;
-            } else if (!(Permissions & UI_PERMISSION_KIND_TEXT) && (Node->V.Kind == UI_EVENT_KIND_TEXT)) {
+                }
+            } else if (
+                !(Permissions & UI_PERMISSION_KIND_TEXT) && 
+                (Node->V.Kind == UI_EVENT_KIND_TEXT)
+            ) {
                 PermissionsOK = FALSE;
             }
 
@@ -819,7 +920,10 @@ UISlotPress(UIEventActionSlot Slot)
 void 
 UISetAutoCompleteStr(Str8 String)
 {
-    GetTLS()->UI_STATE->AutoCompleteString = ArenaPushStrCpy(UIBuildMemPool(), String);
+    GetTLS()->UI_STATE->AutoCompleteString = ArenaPushStrCpy(
+        UIBuildMemPool(), 
+        String
+    );
 }
 
 Str8 
@@ -860,7 +964,10 @@ UIStoreDragData(Str8 String)
     UIState* UI_STATE = GetTLS()->UI_STATE;
 
     ArenaClear(UI_STATE->DragStateMemPool);
-    UI_STATE->DragStateData = ArenaPushStrCpy(UI_STATE->DragStateMemPool, String);
+    UI_STATE->DragStateData = ArenaPushStrCpy(
+        UI_STATE->DragStateMemPool, 
+        String
+    );
 }
 
 Str8 
@@ -901,7 +1008,10 @@ UIStringHoverBeginTimeUSecs(void)
 FancyStrList 
 UIStringHoverFancyStrings(Arena* MemPool)
 {
-    FancyStrList Result = ListCpy(MemPool, &GetTLS()->UI_STATE->StringHoverFancyStrings);
+    FancyStrList Result = ListCpy(
+        MemPool, 
+        &GetTLS()->UI_STATE->StringHoverFancyStrings
+    );
 
     return Result;
 }
@@ -945,7 +1055,11 @@ UIBoxFromKey(UIKey Key)
     if (Key != EMPTY_UI_KEY_VALUE) {
         u64 Slot = *Key.V % UI_STATE->BoxTableSize;
 
-        for (UIBox* Box = UI_STATE->BoxTable[Slot].Head; !IsUIBoxEmpty(Box); Box = Box->HashNext) {
+        for (
+            UIBox* Box = UI_STATE->BoxTable[Slot].Head; 
+            !IsUIBoxEmpty(Box); 
+            Box = Box->HashNext
+        ) {
             if (Box->Key == Key) {
                 Result = Box;
                 break;
@@ -1093,8 +1207,22 @@ UIBeginBuild(
             u64 SlotIndex = *Node->Key.V % UI_STATE->AnimationSlotsCount;
             UIAnimationSlot* Slot = &UI_STATE->AnimationSlots[SlotIndex];
 
-            DLL_REMOVE_EX(EMPTY_ANIMATION_NODE_VALUE, Slot->Head, Slot->Tail, Node, SlotNext, SlotPrev);
-            DLL_REMOVE_EX(EMPTY_ANIMATION_NODE_VALUE, UI_STATE->LRUAnimationNode, UI_STATE->MRUAnimationNode, Node, LRUNext, LRUPrev);
+            DLL_REMOVE_EX(
+                EMPTY_ANIMATION_NODE_VALUE, 
+                Slot->Head, 
+                Slot->Tail, 
+                Node, 
+                SlotNext, 
+                SlotPrev
+            );
+            DLL_REMOVE_EX(
+                EMPTY_ANIMATION_NODE_VALUE, 
+                UI_STATE->LRUAnimationNode, 
+                UI_STATE->MRUAnimationNode, 
+                Node, 
+                LRUNext, 
+                LRUPrev
+            );
             SLL_STACK_PUSH_EX(UI_STATE->FreeAnimationNode, Node, SlotNext);
         } else {
             break;
@@ -1112,9 +1240,27 @@ UIBeginBuild(
             u64 SlotIndex = *Node->Key.V % UI_STATE->ThemePatternCacheSlotsCount;
             UIThemePatternCacheSlot* Slot = &UI_STATE->ThemePatternCacheSlots[SlotIndex];
 
-            DLL_REMOVE_EX(NULL, Slot->Head, Slot->Tail, Node, SlotNext, SlotPrev);
-            DLL_REMOVE_EX(NULL, UI_STATE->LRUThemePatternCacheNode, UI_STATE->MRUThemePatternCacheNode, Node, LRUNext, LRUPrev);
-            SLL_STACK_PUSH_EX(UI_STATE->ThemePatternCacheNodeFree, Node, SlotNext);
+            DLL_REMOVE_EX(
+                NULL, 
+                Slot->Head, 
+                Slot->Tail, 
+                Node, 
+                SlotNext, 
+                SlotPrev
+            );
+            DLL_REMOVE_EX(
+                NULL, 
+                UI_STATE->LRUThemePatternCacheNode, 
+                UI_STATE->MRUThemePatternCacheNode, 
+                Node, 
+                LRUNext, 
+                LRUPrev
+            );
+            SLL_STACK_PUSH_EX(
+                UI_STATE->ThemePatternCacheNodeFree, 
+                Node, 
+                SlotNext
+            );
         } else {
             break;
         }
@@ -1153,10 +1299,17 @@ UIBeginBuild(
         IconKind < UI_ICON_KIND_COUNT; 
         IconKind = (UIIconKind) (IconKind + 1)
     ) {
-        UI_STATE->IconInfo.IconKindTextMap[IconKind] = ArenaPushStrCpy(UIBuildMemPool(), IconInfo->IconKindTextMap[IconKind]);
+        UI_STATE->IconInfo.IconKindTextMap[IconKind] = ArenaPushStrCpy(
+            UIBuildMemPool(), 
+            IconInfo->IconKindTextMap[IconKind]
+        );
     }
 
-    MemCpy(&UI_STATE->AnimationInfo, AnimationInfo, sizeof(UI_STATE->AnimationInfo));
+    MemCpy(
+        &UI_STATE->AnimationInfo, 
+        AnimationInfo, 
+        sizeof(UI_STATE->AnimationInfo)
+    );
 
     TempArena Scratch = GetScratch(NULL, 0);
 
@@ -1167,7 +1320,9 @@ UIBeginBuild(
             if (NavRoot->DefaultNavFocusActiveKey == EMPTY_UI_KEY_VALUE) {
                 for (;;) {
                     b32 Moved = FALSE;
-                    UIBox* FocusBox = UIBoxFromKey(NavRoot->DefaultNavFocusNextHotKey);
+                    UIBox* FocusBox = UIBoxFromKey(
+                        NavRoot->DefaultNavFocusNextHotKey
+                    );
                     UIBoxList NextFocusBoxCandidates = {};
                     b32 NavNext = FALSE;
                     b32 NavPrev = FALSE;
@@ -1179,39 +1334,71 @@ UIBeginBuild(
                     if (UIKeyPress(INPUT_MOD_KIND_SHIFT, INPUT_KIND_TAB))
                         NavPrev = TRUE;
 
-                    for (UIEventNode* Node = Events->Head, *Next = NULL; Node; Node = Next) {
+                    for (
+                        UIEventNode* Node = Events->Head, *Next = NULL; 
+                        Node; 
+                        Node = Next
+                    ) {
                         Next = Node->Next;
 
                         b32 Taken = FALSE;
 
-                        if (Node->V.DeltaI32.X == 0 && Node->V.DeltaI32.Y == 0)
+                        if (!Node->V.DeltaI32.X && !Node->V.DeltaI32.Y)
                             continue;
 
                         if (
-                            ((Node->V.DeltaI32.X > 0 && NavRoot->Kind & UI_BOX_KIND_DEFAULT_FOCUS_NAV_X) || Node->V.DeltaI32.X == 0) &&
-                            ((Node->V.DeltaI32.Y > 0 && NavRoot->Kind & UI_BOX_KIND_DEFAULT_FOCUS_NAV_Y) || Node->V.DeltaI32.Y == 0)
+                            (
+                                (
+                                    Node->V.DeltaI32.X > 0 && 
+                                    NavRoot->Kind & UI_BOX_KIND_DEFAULT_FOCUS_NAV_X
+                                ) || 
+                                !Node->V.DeltaI32.X
+                            ) &&
+                            (
+                                (
+                                    Node->V.DeltaI32.Y > 0 && 
+                                    NavRoot->Kind & UI_BOX_KIND_DEFAULT_FOCUS_NAV_Y
+                                ) || 
+                                !Node->V.DeltaI32.Y
+                            )
                         ) {
                             Taken = TRUE;
                             NavNext = TRUE;
                         }
 
                         if (
-                            ((Node->V.DeltaI32.X < 0 && NavRoot->Kind & UI_BOX_KIND_DEFAULT_FOCUS_NAV_X) || Node->V.DeltaI32.X == 0) &&
-                            ((Node->V.DeltaI32.Y < 0 && NavRoot->Kind & UI_BOX_KIND_DEFAULT_FOCUS_NAV_Y) || Node->V.DeltaI32.Y == 0)
+                            (
+                                (
+                                    Node->V.DeltaI32.X < 0 && 
+                                    NavRoot->Kind & UI_BOX_KIND_DEFAULT_FOCUS_NAV_X
+                                ) || 
+                                !Node->V.DeltaI32.X
+                            ) &&
+                            (
+                                (
+                                    Node->V.DeltaI32.Y < 0 && 
+                                    NavRoot->Kind & UI_BOX_KIND_DEFAULT_FOCUS_NAV_Y
+                                ) || 
+                                !Node->V.DeltaI32.Y
+                            )
                         ) {
                             Taken = TRUE;
                             NavPrev = TRUE;
                         }
 
                         if (Node->V.Flags & UI_EVENT_FLAG_EXPLICIT_DIRECTIONAL)
-                            AxisLock = (Node->V.DeltaI32.X != 0) ? AXIS_2D_X : AXIS_2D_Y;
+                            AxisLock = (Node->V.DeltaI32.X != 0) 
+                                ? AXIS_2D_X 
+                                : AXIS_2D_Y;
 
                         if (Taken)
                             UIEatEventNode(Events, Node);
                     }
 
                     if (NavNext) {
-                        UIBox* SearchStart = IsUIBoxEmpty(FocusBox) ? NavRoot : FocusBox;
+                        UIBox* SearchStart = IsUIBoxEmpty(FocusBox) 
+                            ? NavRoot 
+                            : FocusBox;
                         u64 MovedInAxis[AXIS_2D_COUNT] = {};
 
                         Moved = TRUE;
@@ -1245,14 +1432,20 @@ UIBeginBuild(
                             }
 
                             if (LastBox == Box) {
-                                ListPush(Scratch.MemPool, &NextFocusBoxCandidates, EMPTY_UI_BOX_VALUE);
+                                ListPush(
+                                    Scratch.MemPool, 
+                                    &NextFocusBoxCandidates, 
+                                    EMPTY_UI_BOX_VALUE
+                                );
                                 break;
                             }
                         }
                     }
 
                     if (NavPrev) {
-                        UIBox* SearchStart = (IsUIBoxEmpty(FocusBox)) ? NavRoot : FocusBox;
+                        UIBox* SearchStart = (IsUIBoxEmpty(FocusBox)) 
+                            ? NavRoot 
+                            : FocusBox;
                         u64 MovedInAxis[AXIS_2D_COUNT] = {};
 
                         Moved = TRUE;
@@ -1274,7 +1467,11 @@ UIBeginBuild(
                             UIBox* RootDescendant = EMPTY_UI_BOX_VALUE;
 
                             if (Box == NavRoot && Box == SearchStart) {
-                                for (UIBox* D = Box->Tail; !IsUIBoxEmpty(D); D = D->Tail) {
+                                for (
+                                    UIBox* D = Box->Tail; 
+                                    !IsUIBoxEmpty(D); 
+                                    D = D->Tail
+                                ) {
                                     ++MovedInAxis[D->Parent->ChildLayoutAxis];
                                     RootDescendant = D;
                                 }
@@ -1282,7 +1479,11 @@ UIBeginBuild(
 
                             UIBox* PrevDescendant = EMPTY_UI_BOX_VALUE;
 
-                            for (UIBox* D = Box->Prev; !IsUIBoxEmpty(D); D = D->Tail) {
+                            for (
+                                UIBox* D = Box->Prev; 
+                                !IsUIBoxEmpty(D); 
+                                D = D->Tail
+                            ) {
                                 ++MovedInAxis[D->Parent->ChildLayoutAxis];
                                 PrevDescendant = D;
                             }
@@ -1297,7 +1498,11 @@ UIBeginBuild(
                             }
 
                             if (Box == LastBox) {
-                                ListPush(Scratch.MemPool, &NextFocusBoxCandidates, EMPTY_UI_BOX_VALUE);
+                                ListPush(
+                                    Scratch.MemPool, 
+                                    &NextFocusBoxCandidates, 
+                                    EMPTY_UI_BOX_VALUE
+                                );
                                 break;
                             }
                         }
@@ -1306,14 +1511,28 @@ UIBeginBuild(
                     UIBox* NextFocusBox = FocusBox;
                     f32 BestDistanceFromStart = 1000000.0f;
 
-                    for (UIBoxNode* Node = NextFocusBoxCandidates.Head; Node; Node = Node->Next) {
+                    for (
+                        UIBoxNode* Node = NextFocusBoxCandidates.Head; 
+                        Node; 
+                        Node = Node->Next
+                    ) {
                         UIBox* Box = Node->Box;
                         f32 DistanceFromStart = 0.0f;
 
-                        if (AxisLock != AXIS_2D_INVALID)
-                            DistanceFromStart = AbsF32(Centre(Box->Rect).V[FLIP_AXIS(AxisLock)] - Centre(FocusBox->Rect).V[FLIP_AXIS(AxisLock)]);
+                        if (AxisLock != AXIS_2D_INVALID) {
+                            DistanceFromStart = AbsF32(
+                                Centre(
+                                    Box->Rect
+                                ).V[FLIP_AXIS(AxisLock)] - Centre(
+                                    FocusBox->Rect
+                                ).V[FLIP_AXIS(AxisLock)]
+                            );
+                        }
 
-                        if (DistanceFromStart < BestDistanceFromStart && Box != FocusBox) {
+                        if (
+                            DistanceFromStart < BestDistanceFromStart && 
+                            Box != FocusBox
+                        ) {
                             NextFocusBox = Box;
                             BestDistanceFromStart = DistanceFromStart;
                         }
@@ -1331,10 +1550,14 @@ UIBeginBuild(
                     UIBox* PrevFocusRoot = NavRoot;
 
                     for (
-                        UIBox* FocusRoot = UIBoxFromKey(NavRoot->DefaultNavFocusActiveKey); 
+                        UIBox* FocusRoot = UIBoxFromKey(
+                            NavRoot->DefaultNavFocusActiveKey
+                        ); 
                         !IsUIBoxEmpty(FocusRoot); 
                     ) {
-                        UIBox* NextFocusRoot = UIBoxFromKey(FocusRoot->DefaultNavFocusActiveKey);
+                        UIBox* NextFocusRoot = UIBoxFromKey(
+                            FocusRoot->DefaultNavFocusActiveKey
+                        );
 
                         if (IsUIBoxEmpty(NextFocusRoot)) {
                             PrevFocusRoot->DefaultNavFocusNextActiveKey = EMPTY_UI_KEY_VALUE;
@@ -1352,8 +1575,16 @@ UIBeginBuild(
     UI_STATE->DefaultNavRootKey = EMPTY_UI_KEY_VALUE;
     ReleaseScratch(Scratch);
 
-    for (u64 SlotIndex = 0; SlotIndex < UI_STATE->BoxTableSize; ++SlotIndex) {
-        for (UIBox* Box = UI_STATE->BoxTable[SlotIndex].Head; !IsUIBoxEmpty(Box); Box = Box->HashNext) {
+    for (
+        u64 SlotIndex = 0; 
+        SlotIndex < UI_STATE->BoxTableSize; 
+        ++SlotIndex
+    ) {
+        for (
+            UIBox* Box = UI_STATE->BoxTable[SlotIndex].Head; 
+            !IsUIBoxEmpty(Box); 
+            Box = Box->HashNext
+        ) {
             Box->DefaultNavFocusHotKey = Box->DefaultNavFocusNextHotKey;
             Box->DefaultNavFocusActiveKey = Box->DefaultNavFocusNextActiveKey;
         }
@@ -1378,7 +1609,10 @@ UIBeginBuild(
             UIPreferredWidth(UI_SUM_OF_CHILDREN(1.0f)) {
                 UIPreferredHeight(UI_SUM_OF_CHILDREN(1.0f)) {
                     UISetNextChildLayoutAxis(AXIS_2D_Y);
-                    UI_STATE->TooltipRoot = UIBuildBoxFromStr(0, "###tooltip"_s8);
+                    UI_STATE->TooltipRoot = UIBuildBoxFromStr(
+                        0, 
+                        "###tooltip"_s8
+                    );
                 }
             }
         }
@@ -1392,7 +1626,10 @@ UIBeginBuild(
     if (!IsUIBoxEmpty(AnchorBox))
         UI_STATE->ContextMenuAnchorBoxLastPosition = AnchorBox->Rect.Point0;
 
-    v2f32 Anchor = UI_STATE->ContextMenuAnchorBoxLastPosition + UI_STATE->ContextMenuAnchorOffset;
+    v2f32 Anchor = (
+        UI_STATE->ContextMenuAnchorBoxLastPosition + 
+        UI_STATE->ContextMenuAnchorOffset
+    );
 
     UIFixedX(Anchor.X) {
         UIFixedY(Anchor.Y) {
@@ -1462,21 +1699,37 @@ UIEndBuild(void)
     for (u64 SlotIndex = 0; SlotIndex < UI_STATE->BoxTableSize; ++SlotIndex) {
         UIBoxHashSlot* Slot = &UI_STATE->BoxTable[SlotIndex];
 
-        for (UIBox* Box = Slot->Head, *Next = NULL; !IsUIBoxEmpty(Box); Box = Next) {
+        for (
+            UIBox* Box = Slot->Head, *Next = NULL; 
+            !IsUIBoxEmpty(Box); 
+            Box = Next
+        ) {
             Next = Box->HashNext;
 
             if (
                 Box->LastTouchedBuildIndex < UI_STATE->BuildIndex || 
                 Box->Key == EMPTY_UI_KEY_VALUE
             ) {
-                DLL_REMOVE_EX(EMPTY_UI_BOX_VALUE, Slot->Head, Slot->Tail, Box, HashNext, HashPrev);
+                DLL_REMOVE_EX(
+                    EMPTY_UI_BOX_VALUE, 
+                    Slot->Head, 
+                    Slot->Tail, 
+                    Box, 
+                    HashNext, 
+                    HashPrev
+                );
                 SLL_STACK_PUSH(UI_STATE->HeadFreeBox, Box);
             }
         }
     }
 
-    for (Axis2D Axis = (Axis2D) 0; Axis < AXIS_2D_COUNT; Axis = (Axis2D) (Axis + 1))
+    for (
+        Axis2D Axis = (Axis2D) 0; 
+        Axis < AXIS_2D_COUNT; 
+        Axis = (Axis2D) (Axis + 1)
+    ) {
         UILayoutRoot(UI_STATE->Root, Axis);
+    }
 
     if (!UI_STATE->ContextMenuTouchedThisFrame)
         UIContextMenuClose();
@@ -1561,13 +1814,22 @@ UIEndBuild(void)
             }
 
             Node->Current += (Node->Params.Target - Node->Current) * Node->Params.Rate;
-            UI_STATE->IsAnimating = (UI_STATE->IsAnimating || AbsF32(Node->Params.Target - Node->Current) > Node->Params.Epsilon);
+            UI_STATE->IsAnimating = (
+                UI_STATE->IsAnimating || 
+                AbsF32(
+                    Node->Params.Target - Node->Current
+                ) > Node->Params.Epsilon
+            );
         }
     }
 
     f32 SlowRate = 1.0f - Pow(2.0f, -30.0f * UI_STATE->AnimationDelta);
 
-    for (u64 SlotIndex = 0; SlotIndex < UI_STATE->ThemePatternCacheSlotsCount; ++SlotIndex) {
+    for (
+        u64 SlotIndex = 0; 
+        SlotIndex < UI_STATE->ThemePatternCacheSlotsCount; 
+        ++SlotIndex
+    ) {
         for (
             UIThemePatternCacheNode* Node = UI_STATE->ThemePatternCacheSlots[SlotIndex].Head; 
             Node; 
@@ -1821,8 +2083,13 @@ UIEndBuild(void)
                 if (B != Box && B->Key == UIHotKey())
                     goto BREAK_ALL_HOVER_STRING;
 
-                if (B != Box && InRange(B->Rect, UI_STATE->Mouse) && B->Kind & UI_BOX_KIND_DRAW_TEXT)
+                if (
+                    B != Box && 
+                    InRange(B->Rect, UI_STATE->Mouse) && 
+                    B->Kind & UI_BOX_KIND_DRAW_TEXT
+                ) {
                     goto BREAK_ALL_HOVER_STRING;
+                }
             }
         }
 
@@ -1830,7 +2097,11 @@ BREAK_ALL_HOVER_STRING:
         if (!Found) {
             ArenaClear(UI_STATE->StringHoverMemPool);
             UI_STATE->StringHoverBuildIndex = 0;
-            MemSet(&UI_STATE->StringHoverString, 0, sizeof(UI_STATE->StringHoverString));
+            MemSet(
+                &UI_STATE->StringHoverString, 
+                0, 
+                sizeof(UI_STATE->StringHoverString)
+            );
         }
 
         if (Found && !UIStringHoverActive())
@@ -1876,7 +2147,11 @@ UICalcSizesUpwardsDependent(UIBox* Root, Axis2D Axis)
             case UI_SIZE_KIND_PERCENT_OF_PARENT: {
                 UIBox* FixedParent = EMPTY_UI_BOX_VALUE;
 
-                for (UIBox* Parent = Box->Parent; !IsUIBoxEmpty(Parent); Parent = Parent->Parent) {
+                for (
+                    UIBox* Parent = Box->Parent; 
+                    !IsUIBoxEmpty(Parent); 
+                    Parent = Parent->Parent
+                ) {
                     if (
                         Parent->Kind & (UI_BOX_KIND_FIXED_WIDTH << Axis) ||
                         Parent->PreferredSize[Axis].Kind == UI_SIZE_KIND_PIXELS ||
@@ -1902,7 +2177,11 @@ UICalcSizesDownwardsDependent(UIBox* Root, Axis2D Axis)
 {
     UIBoxRecord Record = {};
 
-    for (UIBox* Box = Root; !IsUIBoxEmpty(Box); Box = Record.Next) {
+    for (
+        UIBox* Box = Root; 
+        !IsUIBoxEmpty(Box); 
+        Box = Record.Next
+    ) {
         Record = UIBoxRecordDFPre(Box, Root);
 
         i32 PopIndex = 0;
@@ -1915,7 +2194,11 @@ UICalcSizesDownwardsDependent(UIBox* Root, Axis2D Axis)
             if (B->PreferredSize[Axis].Kind == UI_SIZE_KIND_SUM_OF_CHILDREN) {
                 f32 Sum = 0.0f;
 
-                for (UIBox* Child = B->Head; !IsUIBoxEmpty(Child); Child = Child->Next) {
+                for (
+                    UIBox* Child = B->Head; 
+                    !IsUIBoxEmpty(Child); 
+                    Child = Child->Next
+                ) {
                     if (!(Child->Kind & (UI_BOX_KIND_FLOATING_X << Axis))) {
                         if (Axis == B->ChildLayoutAxis)
                             Sum += Child->FixedSize.V[Axis];
@@ -1935,11 +2218,22 @@ UILayoutEnforceConstraints(UIBox* Root, Axis2D Axis)
 {
     TempArena Scratch = GetScratch(NULL, 0);
 
-    for (UIBox* Box = Root; !IsUIBoxEmpty(Box); Box = UIBoxRecordDFPre(Box, Root).Next) {
-        if (Axis != Box->ChildLayoutAxis && !(Box->Kind & (UI_BOX_KIND_ALLOW_OVERFLOW_X << Axis))) {
+    for (
+        UIBox* Box = Root; 
+        !IsUIBoxEmpty(Box); 
+        Box = UIBoxRecordDFPre(Box, Root).Next
+    ) {
+        if (
+            Axis != Box->ChildLayoutAxis && 
+            !(Box->Kind & (UI_BOX_KIND_ALLOW_OVERFLOW_X << Axis))
+        ) {
             f32 AllowedSize = Box->FixedSize.V[Axis];
 
-            for (UIBox* Child = Box->Head; !IsUIBoxEmpty(Child); Child = Child->Next) {
+            for (
+                UIBox* Child = Box->Head; 
+                !IsUIBoxEmpty(Child); 
+                Child = Child->Next
+            ) {
                 if (!(Child->Kind & (UI_BOX_KIND_FLOATING_X << Axis))) {
                     f32 ChildSize = Child->FixedSize.V[Axis];
                     f32 Violation = ChildSize - AllowedSize;
@@ -1952,12 +2246,19 @@ UILayoutEnforceConstraints(UIBox* Root, Axis2D Axis)
             }
         }
 
-        if (Axis == Box->ChildLayoutAxis && !(Box->Kind & (UI_BOX_KIND_ALLOW_OVERFLOW_X << Axis))) {
+        if (
+            Axis == Box->ChildLayoutAxis && 
+            !(Box->Kind & (UI_BOX_KIND_ALLOW_OVERFLOW_X << Axis))
+        ) {
             f32 TotalAllowedSize = Box->FixedSize.V[Axis];
             f32 TotalSize = 0.0f;
             f32 TotalWeightedSize = 0.0f;
 
-            for (UIBox* Child = Box->Head; !IsUIBoxEmpty(Child); Child = Child->Next) {
+            for (
+                UIBox* Child = Box->Head; 
+                !IsUIBoxEmpty(Child); 
+                Child = Child->Next
+            ) {
                 if (!(Child->Kind & (UI_BOX_KIND_FLOATING_X << Axis))) {
                     TotalSize += Child->FixedSize.V[Axis];
                     TotalWeightedSize += Child->FixedSize.V[Axis] * (1.0f - Child->PreferredSize[Axis].Strictness);
@@ -1969,7 +2270,11 @@ UILayoutEnforceConstraints(UIBox* Root, Axis2D Axis)
             if (Violation > 0.0f && TotalWeightedSize > 0.0f) {
                 TempArena Temp = ArenaBeginTemp(Scratch.MemPool);
                 f32 ChildFixupSum = 0.0f;
-                f32* ChildFixups = ArenaPushArrayZero(Temp.MemPool, f32, Box->ChildCount);
+                f32* ChildFixups = ArenaPushArrayZero(
+                    Temp.MemPool, 
+                    f32, 
+                    Box->ChildCount
+                );
                 u64 ChildIndex = 0;
 
                 for (UIBox* Child = Box->Head; !IsUIBoxEmpty(Child); Child = Child->Next, ++ChildIndex) {
@@ -1984,7 +2289,11 @@ UILayoutEnforceConstraints(UIBox* Root, Axis2D Axis)
 
                 ChildIndex = 0;
 
-                for (UIBox* Child = Box->Head; !IsUIBoxEmpty(Child); Child = Child->Next, ++ChildIndex) {
+                for (
+                    UIBox* Child = Box->Head; 
+                    !IsUIBoxEmpty(Child); 
+                    Child = Child->Next, ++ChildIndex
+                ) {
                     if (!(Child->Kind & (UI_BOX_KIND_FLOATING_X << Axis))) {
                         f32 FixupPercent = (Violation / TotalWeightedSize);
 
@@ -1998,12 +2307,28 @@ UILayoutEnforceConstraints(UIBox* Root, Axis2D Axis)
         }
 
         if (Box->Kind & (UI_BOX_KIND_ALLOW_OVERFLOW_X << Axis))
-            for (UIBox* Child = Box->Head; !IsUIBoxEmpty(Child); Child = Child->Next)
-                if (Child->PreferredSize[Axis].Kind == UI_SIZE_KIND_PERCENT_OF_PARENT)
+            for (
+                UIBox* Child = Box->Head; 
+                !IsUIBoxEmpty(Child); 
+                Child = Child->Next
+            ) {
+                if (
+                    Child->PreferredSize[Axis].Kind == UI_SIZE_KIND_PERCENT_OF_PARENT
+                ) {
                     Child->FixedSize.V[Axis] = Box->FixedSize.V[Axis] * Child->PreferredSize[Axis].Value;
+                }
+            }
 
-        for (UIBox* Child = Box->Head; !IsUIBoxEmpty(Child); Child = Child->Next)
-            Child->FixedSize.V[Axis] = MAX(Child->FixedSize.V[Axis], Child->MinSize.V[Axis]);
+        for (
+            UIBox* Child = Box->Head; 
+            !IsUIBoxEmpty(Child); 
+            Child = Child->Next
+        ) {
+            Child->FixedSize.V[Axis] = MAX(
+                Child->FixedSize.V[Axis], 
+                Child->MinSize.V[Axis]
+            );
+        }
     }
 
     ReleaseScratch(Scratch);
@@ -2012,12 +2337,23 @@ UILayoutEnforceConstraints(UIBox* Root, Axis2D Axis)
 void 
 UILayoutPosition(UIBox* Root, Axis2D Axis)
 {
-    for (UIBox* Box = Root; !IsUIBoxEmpty(Box); Box = UIBoxRecordDFPre(Box, Root).Next) {
+    for (
+        UIBox* Box = Root; 
+        !IsUIBoxEmpty(Box); 
+        Box = UIBoxRecordDFPre(Box, Root).Next
+    ) {
         f32 LayoutPosition = 0.0f;
         f32 Bounds = 0.0f;
 
-        for (UIBox* Child = Box->Head; !IsUIBoxEmpty(Child); Child = Child->Next) {
-            f32 OriginalPosition = MIN(Child->Rect.Point0.V[Axis], Child->Rect.Point1.V[Axis]);
+        for (
+            UIBox* Child = Box->Head; 
+            !IsUIBoxEmpty(Child); 
+            Child = Child->Next
+        ) {
+            f32 OriginalPosition = MIN(
+                Child->Rect.Point0.V[Axis], 
+                Child->Rect.Point1.V[Axis]
+            );
 
             if (!(Child->Kind & (UI_BOX_KIND_FLOATING_X << Axis))) {
                 Child->FixedPosition.V[Axis] = LayoutPosition;
@@ -2069,6 +2405,201 @@ UILayoutRoot(UIBox* Root, Axis2D Axis)
     UICalcSizesDownwardsDependent(Root, Axis);
     UILayoutEnforceConstraints(Root, Axis);
     UILayoutPosition(Root, Axis);
+}
+
+void
+UIDrawRoot(UIBox *Root)
+{
+    for (UIBox* Box = Root; !IsUIBoxEmpty(Box); ) {
+        UIBoxRecord Rec = UIBoxRecordDFPost(Box, EMPTY_UI_BOX_VALUE);
+
+        if (Box->Kind & UI_BOX_KIND_DRAW_DROP_SHADOW)
+            DrawShadow(Box->Rect);
+
+        if (Box->Kind & UI_BOX_KIND_DRAW_BACKGROUND) {
+            v4f32 BackgroundColour = Box->BackgroundColour;
+
+            if (
+                Box->Kind & UI_BOX_KIND_FLOATING &&
+                Box->Kind & UI_BOX_KIND_DRAW_DROP_SHADOW
+            ) {
+                BackgroundColour.W = 1.0f;
+            }
+
+            DrawRect(Box->Rect, BackgroundColour, 0.0f);
+
+            f32 ActiveT = (Box->Kind & UI_BOX_KIND_DRAW_ACTIVE_EFFECTS)
+                ? Box->Active
+                : 0.0f;
+
+            if (Box->Kind & UI_BOX_KIND_DRAW_HOT_EFFECTS) {
+                b32 IsHot = (
+                    Box->Key != EMPTY_UI_KEY_VALUE &&
+                    Box->Key == UIHotKey()
+                );
+                v4f32 HoverColour = UIColourFromTagsKeyName(
+                    Box->TagsKey,
+                    "hover"_s8
+                );
+
+                HoverColour.W *= 0.2f;
+
+                if (!IsHot)
+                    HoverColour.W *= Box->Hot * (1.0f - ActiveT);
+
+                if (HoverColour.W > 0.005f)
+                    DrawRect(Box->Rect, HoverColour, 0.0f);
+            }
+
+            if (ActiveT > 0.005f) {
+                DrawRect(
+                    Box->Rect,
+                    Vec(0.0f, 0.0f, 0.0f, 0.3f * ActiveT),
+                    0.0f
+                );
+            }
+        }
+
+        if (Box->Kind & UI_BOX_KIND_DRAW_TEXT) {
+            f32 MaxX = 100000.0f;
+            Str8 Trailer = ""_s8;
+
+            if (!(Box->Kind & UI_BOX_KIND_DISABLE_TEXT_TRUNC)) {
+                MaxX = Box->Rect.X1 - Box->TextPadding;
+                Trailer = "\xE2\x80\xA6"_s8;
+            }
+
+            DrawFancyStrList(
+                UIBoxTextPosition(Box),
+                Box->TabSize,
+                &Box->DisplayFancyStrings,
+                MaxX,
+                Trailer,
+                (Box->Kind & UI_BOX_KIND_HAS_FUZZYMATCH_RANGES)
+                    ? &Box->FuzzyMatchRanges
+                    : NULL,
+                UIColourFromTagsKeyName(Box->TagsKey, "fuzzy_match"_s8)
+            );
+        }
+
+        if (Box->Kind & UI_BOX_KIND_CLIP)
+            DPushClip(Box->Rect);
+
+        if (Box->CustomDrawFunc)
+            Box->CustomDrawFunc(Box, Box->CustomDrawUserData);
+
+        i32 PopIndex = 0;
+
+        for (
+            UIBox* B = Box; 
+            !IsUIBoxEmpty(B) && PopIndex <= Rec.PopCount; 
+            B = B->Parent
+        ) {
+            ++PopIndex;
+
+            if (B == Box && Rec.PushCount)
+                continue;
+
+            if (B->Kind & UI_BOX_KIND_CLIP)
+                DPopClip();
+
+            if (B->Kind & UI_BOX_KIND_DRAW_OVERLAY) {
+                DrawRect(
+                    B->Rect,
+                    UIColourFromTagsKeyName(B->TagsKey, "overlay"_s8),
+                    0.0f
+                );
+            }
+
+            v2f32 Size = Length(B->Rect);
+            v4f32 FocusColour = UIColourFromTagsKeyName(
+                B->TagsKey,
+                "focus"_s8
+            );
+            b32 IsFocusActive = (
+                B->Kind & UI_BOX_KIND_CLICKABLE &&
+                !(B->Kind & UI_BOX_KIND_DISABLE_FOCUS_BORDER) &&
+                B->FocusActive > 0.5f
+            );
+
+            if (B->Kind & UI_BOX_KIND_DRAW_BORDER) {
+                DrawBorder(
+                    B->Rect,
+                    IsFocusActive ? FocusColour : B->BorderColour,
+                    IsFocusActive
+                );
+            }
+
+            if (
+                B->Kind & UI_BOX_KIND_DRAW_SIDE_TOP && 
+                Size.Y >= 2.0f
+            ) {
+                DrawLine(
+                    Vec(B->Rect.X0, B->Rect.Y0),
+                    Vec(B->Rect.X1, B->Rect.Y0),
+                    B->BorderColour
+                );
+            }
+
+            if (
+                B->Kind & UI_BOX_KIND_DRAW_SIDE_BOTTOM &&
+                Size.Y >= 2.0f
+            ) {
+                DrawLine(
+                    Vec(B->Rect.X0, B->Rect.Y1 - 1.0f),
+                    Vec(B->Rect.X1, B->Rect.Y1 - 1.0f),
+                    B->BorderColour
+                );
+            }
+
+            if (
+                B->Kind & UI_BOX_KIND_DRAW_SIDE_LEFT &&
+                Size.X >= 2.0f
+            ) {
+                DrawLine(
+                    Vec(B->Rect.X0, B->Rect.Y0),
+                    Vec(B->Rect.X0, B->Rect.Y1),
+                    B->BorderColour
+                );
+            }
+
+            if (
+                B->Kind & UI_BOX_KIND_DRAW_SIDE_RIGHT &&
+                Size.X >= 2.0f
+            ) {
+                DrawLine(
+                    Vec(B->Rect.X1 - 1.0f, B->Rect.Y0),
+                    Vec(B->Rect.X1 - 1.0f, B->Rect.Y1),
+                    B->BorderColour
+                );
+            }
+
+            if (
+                B->Kind & UI_BOX_KIND_CLICKABLE &&
+                !(B->Kind & UI_BOX_KIND_DISABLE_FOCUS_OVERLAY) &&
+                B->FocusHot > 0.01f
+            ) {
+                v4f32 Colour = FocusColour;
+
+                Colour.W *= 0.2f * B->FocusHot;
+                DrawRect(B->Rect, Colour, 0.0f);
+            }
+
+            if (B->Disabled >= 0.005f) {
+                v4f32 Colour = UIColourFromTagsKeyName(
+                    B->TagsKey,
+                    "background"_s8
+                );
+
+                Colour.W = 0.5f * B->Disabled;
+                DrawRect(B->Rect, Colour, 0.0f);
+            }
+        }
+
+        Box = Rec.Next;
+    }
+
+    DrawMousePointer(UIMouse(), GetCursorKind());
 }
 
 UISignal 
@@ -3008,24 +3539,12 @@ UISignalFromBox(UIBox* Box)
                 Signal.Kind |= (UI_SIGNAL_KIND_LEFT_TRIPLE_CLICKED << EventMouseBtnKind);
             }
 
-            MemCpy(
-                &UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][1],
-                &UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0],
-                sizeof(UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0]) * ARRAY_COUNT(UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind]) - 1
-            );
-
-            MemCpy(
-                &UI_STATE->PressKeyHistory[EventMouseBtnKind][1],
-                &UI_STATE->PressKeyHistory[EventMouseBtnKind][0],
-                sizeof(UI_STATE->PressKeyHistory[EventMouseBtnKind][0]) * ARRAY_COUNT(UI_STATE->PressKeyHistory[EventMouseBtnKind]) - 1
-            );
-
-            MemCpy(
-                &UI_STATE->PressPositionHistory[EventMouseBtnKind][1],
-                &UI_STATE->PressPositionHistory[EventMouseBtnKind][0],
-                sizeof(UI_STATE->PressPositionHistory[EventMouseBtnKind][0]) * ARRAY_COUNT(UI_STATE->PressPositionHistory[EventMouseBtnKind]) - 1
-            );
-
+            UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][2] = UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][1];
+            UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][1] = UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0];
+            UI_STATE->PressKeyHistory[EventMouseBtnKind][2] = UI_STATE->PressKeyHistory[EventMouseBtnKind][1];
+            UI_STATE->PressKeyHistory[EventMouseBtnKind][1] = UI_STATE->PressKeyHistory[EventMouseBtnKind][0];
+            UI_STATE->PressPositionHistory[EventMouseBtnKind][2] = UI_STATE->PressPositionHistory[EventMouseBtnKind][1];
+            UI_STATE->PressPositionHistory[EventMouseBtnKind][1] = UI_STATE->PressPositionHistory[EventMouseBtnKind][0];
             UI_STATE->PressTimestampHistoryUSecs[EventMouseBtnKind][0] = Event->TimestampUSecs;
             UI_STATE->PressKeyHistory[EventMouseBtnKind][0] = Box->Key;
             UI_STATE->PressPositionHistory[EventMouseBtnKind][0] = EventMouse;

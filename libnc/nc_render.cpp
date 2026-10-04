@@ -355,6 +355,9 @@ RendFillRect(r2i32 Rect, v4f32 BackgroundColour)
     b32 Opaque = (BackgroundColour.W >= 1.0f);
     u32 Packed = U32FromRGBA(BackgroundColour);
 
+    if (Opaque && InRange(Clipped, REND_STATE->Caret.Position))
+        REND_STATE->Caret.IsVisible = FALSE;
+
     for (i32 Y = Clipped.Y0; Y < Clipped.Y1; ++Y) {
         RendCell* Cell = GetRendCellFromXY(
             &REND_STATE->BackBuffer, 

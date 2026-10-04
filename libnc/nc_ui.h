@@ -1137,6 +1137,7 @@ void UIKillAction(void);
 UIBox* UIBoxFromKey(UIKey Key);
 void UIBeginBuild(UIEventList* Events, UIIconInfo* IconInfo, UITheme* Theme, UIAnimationInfo* AnimationInfo, f32 RealDeltaTime, f32 AnimationDeltaTime);
 void UIEndBuild(void);
+void UIDrawRoot(UIBox* Root);
 void UICalcSizesStandalone(UIBox* Root, Axis2D Axis);
 void UICalcSizesUpwardsDependent(UIBox* Root, Axis2D Axis);
 void UICalcSizesDownwardsDependent(UIBox* Root, Axis2D Axis);

@@ -78,6 +78,8 @@ void DrawLine(v2f32 Point0, v2f32 Point1, v4f32 Colour);
 void DrawBar(r2f32 Destination, Axis2D Axis, r1f32 Fill, v4f32 FillColour, v4f32 TrackColour);
 void DrawShadow(r2f32 Destination);
 void DrawCaret(v2f32 Position);
+void DrawMousePointer(v2f32 Position, CursorKind Kind);
+void DrawFancyStrList(v2f32 Position, f32 TabSize, FancyStrList* List, f32 MaxX, Str8 Trailer, FMRangeList* Ranges, v4f32 RangeColour);
 void DrawTruncatedFancyStrList(v2f32 Position, FancyStrList* List, f32 MaxX, Str8 Trailer);
 FMRangeList FuzzyFindFStrs(Arena* MemPool, FancyStrList* FancyStrings, Str8 Needle);
 void DrawTruncatedFancyStrListFuzzyMatches(v2f32 Position, f32 TabSize, FancyStrList* List, f32 MaxX, FMRangeList* Ranges, v4f32 Colour);

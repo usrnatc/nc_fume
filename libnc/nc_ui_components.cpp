@@ -408,7 +408,12 @@ UILineEdit(
             UI_SIGNAL_KIND_KEYBOARD_PRESSED
         )
     ) {
-        UISetAutoFocusActiveKey({});
+        UISetAutoFocusActiveKey(Key);
+        UIKillAction();
+    }
+
+    if (IsFocusActive && Sig.Kind & UI_SIGNAL_KIND_KEYBOARD_PRESSED) {
+        UISetAutoFocusActiveKey(EMPTY_UI_KEY_VALUE);
         Sig.Kind |= UI_SIGNAL_KIND_COMMIT;
     }
 

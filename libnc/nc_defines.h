@@ -924,7 +924,17 @@
 } while (FALSE)
 #define DLL_PUSH_BACK(Head, Tail, Node) DLL_INSERT(Head, Tail, Tail, Node)
 #define DLL_PUSH_BACK_EX(Empty, Head, Tail, Node, _Next, _Prev) DLL_INSERT_EX(Empty, Head, Tail, Tail, Node, _Next, _Prev)
-#define DLL_PUSH_FRONT(Head, Tail, Node) DLL_INSERT(Head, Tail, NULL, Node)
+#define DLL_PUSH_FRONT(Head, Tail, Node) do {   \
+    if (!(Head)) {                              \
+        (Head) = (Tail) = (Node);               \
+        (Node)->Next = (Node)->Prev = NULL;     \
+    } else {                                    \
+        (Node)->Next = (Head);                  \
+        (Head)->Prev = (Node);                  \
+        (Head) = (Node);                        \
+        (Node)->Prev = NULL;                    \
+    }                                           \
+} while (FALSE)
 #define DLL_REMOVE(Head, Tail, Node) do {   \
     if ((Node) == (Head)) {                 \
         (Head) = (Node)->Next;              \

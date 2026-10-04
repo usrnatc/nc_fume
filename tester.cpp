@@ -193,13 +193,11 @@ TestDrawFrame(TestState* State)
     f32 W = (f32) Size.X;
     f32 H = (f32) Size.Y;
 
-    // menu bar
     DrawRect(Rng(0.0f, 0.0f, W, 1.0f), Grey, 0.0f);
     TestText(Vec(2.0f, 0.0f), Black, 0, "File  Edit  View  Help"_s8);
     TestText(Vec(2.0f, 0.0f), Red, FANCY_STR_FLAG_UNDERLINE, "F"_s8);
     TestText(Vec(W - 16.0f, 0.0f), Black, 0, "FUME TUI SMOKE"_s8);
 
-    // single border, title on the top edge
     r2f32 BoxA = Rng(2.0f, 2.0f, 42.0f, 16.0f);
 
     DrawRect(BoxA, Field, 0.0f);
@@ -222,7 +220,6 @@ TestDrawFrame(TestState* State)
     TestText(Vec(4.0f, 13.0f), White, 0, "wide    \xE6\xBC\xA2\xE5\xAD\x97 \xF0\x9F\x9A\x80 <- should be ???"_s8);
     TestText(Vec(4.0f, 14.0f), White, 0, "tab\tstop\tstop"_s8);
 
-    // double border with shadow, and the alpha overlay across its corner
     r2f32 BoxB = Rng(46.0f, 2.0f, 78.0f, 12.0f);
 
     DrawShadow(BoxB);
@@ -245,7 +242,6 @@ TestDrawFrame(TestState* State)
     TestText(Vec(48.0f, 9.0f), Black, 0, State->ShouldAnimate ? "SPACE: stop"_s8 : "SPACE: animate, or move the mouse"_s8);
     DrawRect(Rng(60.0f, 6.0f, 80.0f, 14.0f), Overlay, 0.0f);
 
-    // truecolour ramp, then the same ramp darkened by half
     for (i32 X = 0; X < Size.X; ++X) {
         f32 U = (f32) X / (f32) MAX(Size.X - 1, 1);
         v4f32 C = Vec(U, 1.0f - U, 0.5f + 0.5f * SinF32(U * 6.2831f), 1.0f);
@@ -256,13 +252,11 @@ TestDrawFrame(TestState* State)
 
     RendDarkenRect(Rng(0, 18, Size.X, 19), 0.5f);
 
-    // clip test: text that starts inside and runs out of the clip
     DClipScope(Rng(2.0f, 20.0f, 30.0f, 21.0f)) {
         DrawRect(Rng(0.0f, 20.0f, W, 21.0f), Black, 0.0f);
         TestText(Vec(2.0f, 20.0f), Green, 0, "clipped at column 30 ->|<- this text must not be visible"_s8);
     }
 
-    // truncation with a trailer, and a fuzzy range
     {
         FancyStrParams Params = {};
         FancyStrList List = {};
@@ -280,12 +274,10 @@ TestDrawFrame(TestState* State)
         DrawTruncatedFancyStrListFuzzyMatches(Vec(2.0f, 22.0f), 4.0f, &List, W, &Ranges, Yellow);
     }
 
-    // line join test
     DrawLine(Vec(46.0f, 14.0f), Vec(78.0f, 14.0f), Grey);
     DrawLine(Vec(62.0f, 13.0f), Vec(62.0f, 16.0f), Grey);
     DrawLine(Vec(46.0f, 16.0f), Vec(78.0f, 16.0f), Grey);
 
-    // event log
     f32 LogY = 24.0f;
 
     TestText(Vec(2.0f, LogY), Yellow, FANCY_STR_FLAG_BOLD, "EVENTS"_s8);
@@ -300,7 +292,6 @@ TestDrawFrame(TestState* State)
     TestText(Vec(2.0f, LogY + 14.0f), Cyan, 0, ArenaPushStrFmt(State->FrameMemPool, "last paste: %S", PRINT_STR(StrPrefix(State->PrevPaste, 200))));
     TestText(Vec(2.0f, LogY + 15.0f), Cyan, 0, ArenaPushStrFmt(State->FrameMemPool, "last drop:  %S", PRINT_STR(StrPrefix(State->PrevDrop, 200))));
 
-    // status row
     DrawRect(Rng(0.0f, H - 1.0f, W, H), Grey, 0.0f);
     TestText(
         Vec(1.0f, H - 1.0f),
@@ -319,13 +310,630 @@ TestDrawFrame(TestState* State)
             (i32) State->Mouse.Y
         )
     );
-
-    // caret in the box, pointer under the mouse, pointer last
     DrawCaret(Vec(4.0f, 15.0f));
     TestText(Vec(5.0f, 15.0f), Grey, FANCY_STR_FLAG_DIMMED, "<- caret"_s8);
     DrawMousePointer(State->Mouse, GetCursorKind());
 
     DEndFrame();
+}
+
+#define TEST_UI_ROW_COUNT 200000
+
+struct TestUIThemeEntry {
+    u32  Colour;
+    Str8 Tags[2];
+};
+
+struct TestUIState {
+    Arena*        FrameMemPool;
+    UIScrollPoint Scroll;
+    v2i64         Cursor;
+    v2i64         Mark;
+    f32           ColumnPercents[6];
+    TextPoint     EditCursor;
+    TextPoint     EditMark;
+    u8            EditBuffer[32];
+    u64           EditSize;
+    i64           SortColumn;
+    b32           SortAscending;
+    b32           IsLoading;
+    Str8          LastAction;
+    u64           FrameIndex;
+    f64           LastFrameUSecs;
+    b32           ShouldQuit;
+};
+
+internal void
+TestUIPushEvents(
+    Arena* MemPool, 
+    TestUIState* State, 
+    InputEventList* Events, 
+    UIEventList* UIEvents
+) {
+    for (InputEvent* Event = Events->Head; Event; Event = Event->Next) {
+        b32 Shift = !!(Event->Modifier & INPUT_MOD_KIND_SHIFT);
+        b32 Ctrl = !!(Event->Modifier & INPUT_MOD_KIND_CTRL);
+        u8 TextBytes[4] = {};
+        UIEvent UIEvt = {};
+
+        UIEvt.Input = Event->Input;
+        UIEvt.Modifiers = Event->Modifier;
+        UIEvt.Position = Event->Position;
+        UIEvt.TimestampUSecs = Event->TimeStampUSecs;
+
+        switch (Event->Kind) {
+            default: {} break;
+
+            case EVENT_KIND_CONSOLE_CLOSE: {
+                State->ShouldQuit = TRUE;
+            } break;
+
+            case EVENT_KIND_RELEASE: {
+                UIEvt.Kind = UI_EVENT_KIND_RELEASE;
+            } break;
+
+            case EVENT_KIND_MOUSE_MOVE: {
+                UIEvt.Kind = UI_EVENT_KIND_MOUSE_MOVE;
+            } break;
+
+            case EVENT_KIND_SCROLL: {
+                UIEvt.Kind = UI_EVENT_KIND_SCROLL;
+                UIEvt.DeltaF32 = Event->PositionDelta;
+            } break;
+
+            case EVENT_KIND_FILE_DROP: {
+                UIEvt.Kind = UI_EVENT_KIND_FILE_DROP;
+                UIEvt.Paths = Event->Strings;
+            } break;
+
+            case EVENT_KIND_TEXT: {
+                UIEvt.Kind = UI_EVENT_KIND_TEXT;
+                UIEvt.String = Str(
+                    TextBytes, 
+                    UTF8Encode(TextBytes, Event->Character)
+                );
+            } break;
+
+            case EVENT_KIND_PRESS: {
+                UIEvt.Kind = UI_EVENT_KIND_PRESS;
+
+                switch (Event->Input) {
+                    default: {} break;
+
+                    case INPUT_KIND_Q: {
+                        if (Ctrl)
+                            State->ShouldQuit = TRUE;
+                    } break;
+
+                    case INPUT_KIND_RETURN: {
+                        UIEvt.Slot = UI_EVENT_ACTION_SLOT_ACCEPT;
+                    } break;
+
+                    case INPUT_KIND_ESC: {
+                        UIEvt.Slot = UI_EVENT_ACTION_SLOT_CANCEL;
+                    } break;
+
+                    case INPUT_KIND_LEFT:
+                    case INPUT_KIND_RIGHT: {
+                        UIEvt.Kind = UI_EVENT_KIND_NAVIGATE;
+                        UIEvt.Flags = UI_EVENT_FLAG_EXPLICIT_DIRECTIONAL | (
+                            Shift 
+                                ? UI_EVENT_FLAG_KEEP_MARK 
+                                : (UI_EVENT_FLAG_PICK_SELECT_SIDE | UI_EVENT_FLAG_ZERO_DELTA_ON_SELECT)
+                        );
+                        UIEvt.DeltaStride = Ctrl 
+                            ? UI_EVENT_DELTA_STRIDE_WORD 
+                            : UI_EVENT_DELTA_STRIDE_CHAR;
+                        UIEvt.DeltaI32 = Vec((Event->Input == INPUT_KIND_LEFT) ? -1 : 1, 0);
+                    } break;
+
+                    case INPUT_KIND_UP:
+                    case INPUT_KIND_DOWN: {
+                        UIEvt.Kind = UI_EVENT_KIND_NAVIGATE;
+                        UIEvt.Flags = UI_EVENT_FLAG_EXPLICIT_DIRECTIONAL | (
+                            Shift ? UI_EVENT_FLAG_KEEP_MARK : 0
+                        );
+                        UIEvt.DeltaStride = UI_EVENT_DELTA_STRIDE_CHAR;
+                        UIEvt.DeltaI32 = Vec(0, (Event->Input == INPUT_KIND_UP) ? -1 : 1);
+                    } break;
+
+                    case INPUT_KIND_HOME:
+                    case INPUT_KIND_END: {
+                        i32 Direction = (Event->Input == INPUT_KIND_HOME) ? -1 : 1;
+
+                        UIEvt.Kind = UI_EVENT_KIND_NAVIGATE;
+                        UIEvt.Flags = Shift ? UI_EVENT_FLAG_KEEP_MARK : 0;
+                        UIEvt.DeltaStride = Ctrl 
+                            ? UI_EVENT_DELTA_STRIDE_WHOLE 
+                            : UI_EVENT_DELTA_STRIDE_LINE;
+                        UIEvt.DeltaI32 = Ctrl ? Vec(0, Direction) : Vec(Direction, 0);
+                    } break;
+
+                    case INPUT_KIND_PAGEUP:
+                    case INPUT_KIND_PAGEDOWN: {
+                        UIEvt.Kind = UI_EVENT_KIND_NAVIGATE;
+                        UIEvt.Flags = Shift ? UI_EVENT_FLAG_KEEP_MARK : 0;
+                        UIEvt.DeltaStride = UI_EVENT_DELTA_STRIDE_PAGE;
+                        UIEvt.DeltaI32 = Vec(0, (Event->Input == INPUT_KIND_PAGEUP) ? -1 : 1);
+                    } break;
+
+                    case INPUT_KIND_BACKSPACE:
+                    case INPUT_KIND_DELETE: {
+                        UIEvt.Kind = UI_EVENT_KIND_EDIT;
+                        UIEvt.Flags = UI_EVENT_FLAG_DELETE | UI_EVENT_FLAG_ZERO_DELTA_ON_SELECT;
+                        UIEvt.DeltaStride = Ctrl 
+                            ? UI_EVENT_DELTA_STRIDE_WORD 
+                            : UI_EVENT_DELTA_STRIDE_CHAR;
+                        UIEvt.DeltaI32 = Vec((Event->Input == INPUT_KIND_BACKSPACE) ? -1 : 1, 0);
+                    } break;
+                }
+            } break;
+        }
+
+        if (UIEvt.Kind != UI_EVENT_KIND_NULL)
+            ListPush(MemPool, UIEvents, &UIEvt);
+    }
+}
+
+internal void
+TestUIBuild(TestUIState* State)
+{
+    Str8 Menus[] = { 
+        "File"_s8, 
+        "Edit"_s8, 
+        "View"_s8, 
+        "Help"_s8 
+    };
+    Str8 MenuItems[ARRAY_COUNT(Menus)][3] = {
+        {
+            "Open"_s8, 
+            "Extract"_s8, 
+            "Exit"_s8 
+        },
+        { 
+            "Copy"_s8, 
+            "Find"_s8, 
+            "Go to"_s8 
+        },
+        { 
+            "Files"_s8, 
+            "Packets"_s8, 
+            "Sources"_s8 
+        },
+        { 
+            "Keys"_s8, 
+            "About"_s8, 
+            "Version"_s8 
+        }
+    };
+    Str8 ColumnNames[] = { 
+        "Row"_s8, 
+        "Offset"_s8, 
+        "Time"_s8, 
+        "Sys"_s8, 
+        "Comp"_s8, 
+        "Message"_s8 
+    };
+    Str8 MessageNames[] = {
+        "HEARTBEAT"_s8, 
+        "ATTITUDE"_s8, 
+        "GLOBAL_POSITION_INT"_s8, 
+        "SYS_STATUS"_s8, 
+        "RADIO_STATUS"_s8, 
+        "SYSTEM_TIME"_s8
+    };
+    v4f32 Blue = RGBAFromU32(0x0000AAFF);
+    v4f32 DarkBlue = RGBAFromU32(0x000080FF);
+    v4f32 Grey = RGBAFromU32(0xAAAAAAFF);
+    v4f32 Black = RGBAFromU32(0x000000FF);
+    v4f32 Cyan = RGBAFromU32(0x00AAAAFF);
+    v4f32 Red = RGBAFromU32(0xFF5555FF);
+    v2f32 Console = Length(GetConsoleRect());
+    f32 ListHeight = Console.Y - 4.0f;
+    UIKey RowMenuKey = UIKeyFromStr(EMPTY_UI_KEY_VALUE, "###row_menu"_s8);
+    i64 HoveredColumn = -1;
+    f32* ColumnPercents[ARRAY_COUNT(State->ColumnPercents)] = {};
+
+    for (u64 Index = 0; Index < ARRAY_COUNT(ColumnPercents); ++Index)
+        ColumnPercents[Index] = &State->ColumnPercents[Index];
+
+    UIPushPreferredWidth(UI_TEXT_DIM(2.0f, 1.0f));
+    UIPushPreferredWidth(UI_PERCENT(1.0f, 0.0f));
+    UIPushPreferredHeight(UI_PX(1.0f, 1.0f));
+    UISetNextPreferredHeight(UI_PERCENT(1.0f, 1.0f));
+
+    UIColumn() {
+        UISetNextFlags(UI_BOX_KIND_DRAW_BACKGROUND);
+        UISetNextBackgroundColour(Grey);
+
+        UIRow() {
+            UIPushBackgroundColour(Grey);
+            UIPushTextColour(Black);
+            UIPushPreferredWidth(UI_TEXT_DIM(2.0f, 1.0f));
+            UIPushTextAlignment(UI_TEXT_ALIGN_CENTRE);
+
+            for (u64 MenuIndex = 0; MenuIndex < ARRAY_COUNT(Menus); ++MenuIndex) {
+                UISetNextFastpathCodepoint(Menus[MenuIndex].Str[0]);
+                UISetNextFlags(UI_BOX_KIND_DRAW_TEXT_FASTPATH_CODEPOINT);
+
+                UISignal MenuSig = UIButton(Menus[MenuIndex]);
+                UIKey MenuKey = UIKeyFromStr(MenuSig.Box->Key, "###menu"_s8);
+
+                if (UI_PRESSED(MenuSig)) {
+                    if (UIContextMenuIsOpen(MenuKey))
+                        UIContextMenuClose();
+                    else
+                        UIContextMenuOpen(MenuKey, MenuSig.Box->Key, Vec(0.0f, 1.0f));
+                }
+
+                UIContextMenu(MenuKey) {
+                    UIPushTag("floating"_s8);
+                    UIPushPreferredWidth(UI_PX(16.0f, 1.0f));
+                    UIPushTextAlignment(UI_TEXT_ALIGN_LEFT);
+                    UIPushTextPadding(1.0f);
+
+                    for (u64 ItemIndex = 0; ItemIndex < 3; ++ItemIndex) {
+                        if (UI_CLICKED(UIButton(MenuItems[MenuIndex][ItemIndex]))) {
+                            State->LastAction = MenuItems[MenuIndex][ItemIndex];
+                            State->ShouldQuit = (MenuIndex == 0 && ItemIndex == 2);
+                            UIContextMenuClose();
+                        }
+                    }
+
+                    UIPopTextPadding();
+                    UIPopTextAlignment();
+                    UIPopPreferredWidth();
+                    UIPopTag();
+                }
+            }
+
+            UISpacer(UI_PERCENT(1.0f, 0.0f));
+            UILabel("FUME UI SMOKE "_s8);
+            UIPopTextAlignment();
+            UIPopPreferredWidth();
+            UIPopTextColour();
+            UIPopBackgroundColour();
+        }
+
+        UIPushBackgroundColour(Cyan);
+        UIPushTextColour(Black);
+        UIPushTextPadding(1.0f);
+        UISetNextPreferredWidth(UI_PX(Console.X - 1.0f, 1.0f));
+
+        UITable(ARRAY_COUNT(ColumnPercents), ColumnPercents, "###header"_s8) {
+            UITableVector() {
+                for (i64 Column = 0; Column < (i64) ARRAY_COUNT(ColumnNames); ++Column) {
+                    UITableCell() {
+                        UISignal HeaderSig = UISortHeader(
+                            State->SortColumn == Column, 
+                            State->SortAscending, 
+                            ColumnNames[Column]
+                        );
+
+                        if (UI_CLICKED(HeaderSig)) {
+                            State->SortAscending = (State->SortColumn == Column) 
+                                ? !State->SortAscending 
+                                : TRUE;
+                            State->SortColumn = Column;
+                        }
+
+                        if (UI_HOVERING(HeaderSig))
+                            HoveredColumn = Column;
+                    }
+                }
+            }
+        }
+
+        UIPopTextPadding();
+        UIPopTextColour();
+        UIPopBackgroundColour();
+
+        if (HoveredColumn >= 0) {
+            UITooltip() {
+                UILabel("Click to sort by %S", PRINT_STR(ColumnNames[HoveredColumn]));
+            }
+        }
+
+        UIPushFocusHot(UI_FOCUS_KIND_ON);
+        UIPushFocusActive(UI_FOCUS_KIND_ON);
+        UISetNextChildLayoutAxis(AXIS_2D_X);
+
+        UIBox* EditRow = UIBuildBoxFromStr(
+            UI_BOX_KIND_DEFAULT_FOCUS_EDIT, 
+            "###edit_row"_s8
+        );
+
+        UIParent(EditRow) {
+            UIPushPreferredWidth(UI_TEXT_DIM(2.0f, 1.0f));
+            UILabel("Go to row:"_s8);
+            UIPopPreferredWidth();
+            UISetNextBackgroundColour(DarkBlue);
+
+            UISignal EditSig = UILineEdit(
+                &State->EditCursor,
+                &State->EditMark,
+                State->EditBuffer,
+                sizeof(State->EditBuffer),
+                &State->EditSize,
+                Str(State->EditBuffer, State->EditSize),
+                "click here, type a row number, press Enter###goto_edit"_s8
+            );
+
+            if (UI_COMMITTED(EditSig)) {
+                i64 Row = (i64) U64FromStr(Str(State->EditBuffer, State->EditSize));
+
+                Row = CLAMP(0, Row, TEST_UI_ROW_COUNT - 1);
+                State->Cursor.Y = Row + 1;
+                State->Mark = State->Cursor;
+                State->LastAction = "go to row"_s8;
+                UIScrollPointTargetIndex(&State->Scroll, MAX(Row - 3, 0));
+            }
+        }
+
+        UIPopFocusActive();
+        UIPopFocusHot();
+
+        if (ListHeight >= 1.0f) {
+            UIScrollListParameters Params = {};
+            UIScrollListSignal ListSig = {};
+            r1i64 Visible = {};
+
+            Params.Kind = UI_SCROLL_LIST_KIND_ALL;
+            Params.DimensionsPX = Vec(Console.X, ListHeight);
+            Params.RowHeightPX = 1.0f;
+            Params.CursorRange.Max.Y = TEST_UI_ROW_COUNT;
+            Params.ItemRange = Rng((i64) 0, (i64) TEST_UI_ROW_COUNT);
+            Params.CursorMinIsEmptySelection[AXIS_2D_Y] = TRUE;
+            UIPushFocusActive(UI_FOCUS_KIND_ON);
+
+            UIScrollList(&Params, &State->Scroll, &State->Cursor, &State->Mark, &Visible, &ListSig) {
+                UITable(ARRAY_COUNT(ColumnPercents), ColumnPercents, "###rows"_s8) {
+                    for (
+                        i64 Row = Visible.Min; 
+                        Row <= Visible.Max && Row < TEST_UI_ROW_COUNT; 
+                        ++Row
+                    ) {
+                        i64 Item = State->SortAscending 
+                            ? Row 
+                            : (TEST_UI_ROW_COUNT - 1 - Row);
+                        b32 IsBad = (Item % 997 == 500);
+                        b32 IsCursor = (State->Cursor.Y == Row + 1);
+                        Str8 Cells[] = {
+                            ArenaPushStrFmt(State->FrameMemPool, "%llu", (u64) Item),
+                            ArenaPushStrFmt(State->FrameMemPool, "%llu", (u64) Item * 41),
+                            ArenaPushStrFmt(State->FrameMemPool, "%.2f", (f64) Item * 0.01),
+                            IsBad ? "255"_s8 : "1"_s8,
+                            (Item & 1) ? "1"_s8 : "0"_s8,
+                            IsBad 
+                                ? "incorrect CRC"_s8 
+                                : MessageNames[Item % ARRAY_COUNT(MessageNames)]
+                        };
+
+                        UISetNextFlags(
+                            UI_BOX_KIND_MOUSE_CLICKABLE | 
+                            UI_BOX_KIND_DRAW_BACKGROUND | 
+                            UI_BOX_KIND_DRAW_HOT_EFFECTS
+                        );
+                        UISetNextBackgroundColour(
+                            IsCursor ? Cyan : (Row & 1) ? DarkBlue : Blue
+                        );
+                        UITableVectorBegin();
+                        UIPushTextColour(IsCursor ? Black : IsBad ? Red : Grey);
+                        UIPushTextPadding(1.0f);
+
+                        for (u64 Column = 0; Column < ARRAY_COUNT(Cells); ++Column) {
+                            UIPushTextAlignment(
+                                (Column < 5) ? UI_TEXT_ALIGN_RIGHT : UI_TEXT_ALIGN_LEFT
+                            );
+
+                            UITableCell() {
+                                UILabel(Cells[Column]);
+                            }
+
+                            UIPopTextAlignment();
+                        }
+
+                        UIPopTextPadding();
+                        UIPopTextColour();
+
+                        UISignal RowSig = UITableVectorEnd();
+
+                        if (UI_PRESSED(RowSig) || UI_RIGHT_CLICKED(RowSig)) {
+                            State->Cursor.Y = Row + 1;
+                            State->Mark = State->Cursor;
+                        }
+
+                        if (UI_RIGHT_CLICKED(RowSig)) {
+                            UIContextMenuOpen(
+                                RowMenuKey, 
+                                RowSig.Box->Key, 
+                                UIMouse() - RowSig.Box->Rect.Point0
+                            );
+                        }
+                    }
+                }
+            }
+
+            UIPopFocusActive();
+            State->Scroll.Offset = 0.0f;
+        }
+
+        UIContextMenu(RowMenuKey) {
+            UIPushTag("floating"_s8);
+            UIPushPreferredWidth(UI_PX(22.0f, 1.0f));
+            UIPushTextPadding(1.0f);
+
+            if (UI_CLICKED(UIButton("Copy row number"_s8))) {
+                SetClipboardText(
+                    ArenaPushStrFmt(
+                        State->FrameMemPool, 
+                        "%llu", 
+                        (u64) (State->Cursor.Y - 1)
+                    )
+                );
+                State->LastAction = "copy row number"_s8;
+                UIContextMenuClose();
+            }
+
+            if (UI_CLICKED(UIButton("Go to first row"_s8))) {
+                State->Cursor.Y = 1;
+                State->Mark = State->Cursor;
+                State->LastAction = "go to first row"_s8;
+                UIScrollPointTargetIndex(&State->Scroll, 0);
+                UIContextMenuClose();
+            }
+
+            if (UI_CLICKED(UIButton("Go to last row"_s8))) {
+                State->Cursor.Y = TEST_UI_ROW_COUNT;
+                State->Mark = State->Cursor;
+                State->LastAction = "go to last row"_s8;
+                UIScrollPointTargetIndex(&State->Scroll, TEST_UI_ROW_COUNT - 1);
+                UIContextMenuClose();
+            }
+
+            UIPopTextPadding();
+            UIPopPreferredWidth();
+            UIPopTag();
+        }
+
+        UISetNextFlags(UI_BOX_KIND_DRAW_BACKGROUND);
+        UISetNextBackgroundColour(Grey);
+
+        UIRow() {
+            UIPushBackgroundColour(Grey);
+            UIPushTextColour(Black);
+            UIPushPreferredWidth(UI_TEXT_DIM(2.0f, 1.0f));
+            UISetNextPreferredWidth(UI_SUM_OF_CHILDREN(1.0f));
+            UICheckBox(&State->IsLoading, "Loading"_s8);
+
+            if (State->IsLoading) {
+                UIProgressSpinner(1.0f, "###spinner"_s8);
+                UISetNextPreferredWidth(UI_PX(20.0f, 1.0f));
+                UIProgressBar(
+                    (f32) (State->FrameIndex % 200) / 200.0f, 
+                    "###progress"_s8
+                );
+            }
+
+            UILabel(
+                "row %llu of %llu   action: %S   frame %llu   %llu B   %.0f us   Ctrl+Q quits###status",
+                (u64) State->Cursor.Y,
+                (u64) TEST_UI_ROW_COUNT,
+                PRINT_STR(State->LastAction),
+                State->FrameIndex,
+                REND_STATE->PrevFrameBytes,
+                State->LastFrameUSecs
+            );
+            UIPopPreferredWidth();
+            UIPopTextColour();
+            UIPopBackgroundColour();
+        }
+    }
+
+    UIPopPreferredHeight();
+    UIPopPreferredWidth();
+    UIPopPreferredWidth();
+}
+
+internal void
+TestUILoop(void)
+{
+    TestUIThemeEntry ThemeTable[] = {
+        { 0x0000AAFF, { "background"_s8 } },
+        { 0xAAAAAAFF, { "text"_s8 } },
+        { 0xAAAAAAFF, { "border"_s8 } },
+        { 0xFFFFFFFF, { "hover"_s8 } },
+        { 0xFFFF55FF, { "focus"_s8 } },
+        { 0x00000080, { "overlay"_s8 } },
+        { 0xFFFF55FF, { "fuzzy_match"_s8 } },
+        { 0x00AAAAFF, { "accent"_s8 } },
+        { 0xFFFFFF66, { "selection"_s8 } },
+        { 0xFFFFFFFF, { "cursor"_s8 } },
+        { 0xAAAAAAFF, { "floating"_s8, "background"_s8 } },
+        { 0x000000FF, { "floating"_s8, "text"_s8 } },
+        { 0x000000FF, { "floating"_s8, "hover"_s8 } },
+        { 0x000055FF, { "scroll_bar"_s8, "background"_s8 } },
+        { 0xFFFFFFFF, { "scroll_bar"_s8, "accent"_s8 } }
+    };
+    UIThemePattern Patterns[ARRAY_COUNT(ThemeTable)] = {};
+
+    for (u64 Index = 0; Index < ARRAY_COUNT(ThemeTable); ++Index) {
+        Patterns[Index].Tags.Data = ThemeTable[Index].Tags;
+        Patterns[Index].Tags.Count = ThemeTable[Index].Tags[1].Size ? 2 : 1;
+        Patterns[Index].Linear = RGBAFromU32(ThemeTable[Index].Colour);
+    }
+
+    UITheme Theme = { Patterns, ARRAY_COUNT(Patterns) };
+    UIAnimationInfo AnimationInfo = { 1.0f, 1.0f, 1.0f, 1.0f };
+    UIIconInfo Icons = {};
+
+    Icons.IconKindTextMap[UI_ICON_KIND_RIGHT_ARROW] = "\xE2\x96\xB8"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_DOWN_ARROW] = "\xE2\x96\xBC"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_LEFT_ARROW] = "\xE2\x97\x82"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_UP_ARROW] = "\xE2\x96\xB2"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_RIGHT_CARET] = "\xE2\x96\xB8"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_DOWN_CARET] = "\xE2\x96\xBC"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_LEFT_CARET] = "\xE2\x97\x82"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_UP_CARET] = "\xE2\x96\xB2"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_CHECK_HOLLOW] = "[ ]"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_CHECK_FILLED] = "[x]"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_RADIO_HOLLOW] = "( )"_s8;
+    Icons.IconKindTextMap[UI_ICON_KIND_RADIO_FILLED] = "(\xE2\x80\xA2)"_s8;
+
+    TestUIState State = {};
+
+    State.FrameMemPool = ArenaAlloc();
+    State.ColumnPercents[0] = 0.12f;
+    State.ColumnPercents[1] = 0.16f;
+    State.ColumnPercents[2] = 0.16f;
+    State.ColumnPercents[3] = 0.08f;
+    State.ColumnPercents[4] = 0.08f;
+    State.ColumnPercents[5] = 0.40f;
+    State.EditCursor = TxtPt(1, 1);
+    State.EditMark = TxtPt(1, 1);
+    State.SortAscending = TRUE;
+    State.LastAction = "none"_s8;
+
+    UIInit();
+
+    Arena* EventsMemPool = ArenaAlloc();
+    PerfCounter PrevTime = TimeGetTimestamp();
+    b32 Animating = FALSE;
+
+    while (!State.ShouldQuit) {
+        ArenaClear(EventsMemPool);
+        ArenaClear(State.FrameMemPool);
+
+        InputEventList Events = GetEvents(EventsMemPool, !Animating);
+        UIEventList UIEvents = {};
+
+        TestUIPushEvents(EventsMemPool, &State, &Events, &UIEvents);
+
+        if (Animating)
+            SleepMSecs(16);
+
+        PerfCounter Now = TimeGetTimestamp();
+        f32 DeltaTime = (f32) (TimeElapsedUSec(PrevTime, Now) / 1000000.0);
+
+        PrevTime = Now;
+        DeltaTime = MIN(DeltaTime, 0.1f);
+
+        UIBeginBuild(&UIEvents, &Icons, &Theme, &AnimationInfo, DeltaTime, DeltaTime);
+        TestUIBuild(&State);
+        UIEndBuild();
+
+        DBeginFrame(
+            State.FrameMemPool, 
+            RGBAFromU32(0xAAAAAAFF), 
+            RGBAFromU32(0x0000AAFF)
+        );
+        UIDrawRoot(UIRootFromState(UIGetSelectedState()));
+        DEndFrame();
+
+        Animating = UIIsAnimatingFromState(UIGetSelectedState());
+        State.LastFrameUSecs = TimeElapsedUSec(Now, TimeGetTimestamp());
+        ++State.FrameIndex;
+    }
 }
 
 void
@@ -339,6 +947,14 @@ EntryPoint(CommandLine* CLI)
     TerminalInit();
     RendInit(CLI);
     DrawInit();
+
+    if (CommandLineHasFlag(CLI, "ui"_s8)) {
+        TestUILoop();
+        RendRelease();
+        TerminalRelease();
+
+        return;
+    }
 
     Arena* EventsMemPool = ArenaAlloc();
 

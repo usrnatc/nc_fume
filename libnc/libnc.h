@@ -1,25 +1,6 @@
 #if !defined(__LIBNC_H__)
 #define __LIBNC_H__
 
-/*
- *      TODO:
-*_____________________________________________________________________________*
- *      [ ]     TUI system:
- *               - panels
- *               - tabs
- *               - ui components
- *                  > buttons
- *                  > text input
- *                  > toggles
- *                  > watch cells
- *                  > tables
- *                  > scroll regions
- *                  > animations
- *                  > 
- *               - embedded terminal
-*_____________________________________________________________________________*
- */
-
 #include "nc_defines.h"
 #include "nc_types.h"
 #include "nc_system.h"
@@ -57,7 +38,9 @@
 #include "nc_ui_components.h"
 #include "nc_console.h"
 #include "nc_http.h"
+#include "nc_config.h"
 #include "nc_metadesk.h"
+#include "nc_application.h"
 
 #include "nc_math.cpp"
 #include "nc_memory.cpp"
@@ -82,7 +65,9 @@
 #include "nc_ui.cpp"
 #include "nc_ui_components.cpp"
 #include "nc_http.cpp"
+#include "nc_config.cpp"
 #include "nc_metadesk.cpp"
+#include "nc_application.cpp"
 
 #if defined(NC_OS_WIN)
     #include "win32/win32_platform.h"

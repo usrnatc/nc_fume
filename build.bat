@@ -46,18 +46,18 @@ set BSWAPASMOutputObj=win32_bswap.obj
 set MATHASMOutputObj=win32_math.obj
 set INTRINASMOutputObj=win32_intrin.obj
 
-REM set SourceFiles=..\fume.cpp
+set SourceFiles=..\fume.cpp
 
-REM set OutputExe=fume.exe
-REM set OutputPdb=fume.pdb
-REM set OutputMap=fume.map
+set OutputExe=fume.exe
+set OutputPdb=fume.pdb
+set OutputMap=fume.map
 
 
-set SourceFiles=..\tester.cpp
+REM set SourceFiles=..\tester.cpp
 
-set OutputExe=tester.exe
-set OutputPdb=tester.pdb
-set OutputMap=tester.map
+REM set OutputExe=tester.exe
+REM set OutputPdb=tester.pdb
+REM set OutputMap=tester.map
 
 set SharedCompilerFlags=^
     /nologo /FC /WX /W4 /GR- /Gm- /EHa- /EHsc- /Zl ^
