@@ -95,6 +95,48 @@ AppCommandKindInfo APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_COUNT] = {
         APP_ICON_KIND_NULL
     },
     {
+        Str8Lit("new_panel_left"),
+        Str8Lit("Split Panel Left"),
+        Str8Lit("Makes a new panel on the left side of the focused panel."),
+        Str8Lit("split,pane,side"),
+        APP_COMMAND_KIND_FLAG_LIST_IN_UI,
+        APP_ICON_KIND_LEFT_ARROW
+    },
+    {
+        Str8Lit("new_panel_up"),
+        Str8Lit("Split Panel Up"),
+        Str8Lit("Makes a new panel above the focused panel."),
+        Str8Lit("split,pane,side"),
+        APP_COMMAND_KIND_FLAG_LIST_IN_UI,
+        APP_ICON_KIND_UP_ARROW
+    },
+    {
+
+        Str8Lit("new_panel_right"),
+        Str8Lit("Split Panel Right"),
+        Str8Lit("Makes a new panel on the right side of the focused panel."),
+        Str8Lit("split,pane,side"),
+        APP_COMMAND_KIND_FLAG_LIST_IN_UI,
+        APP_ICON_KIND_RIGHT_ARROW
+    },
+    {
+
+        Str8Lit("new_panel_down"),
+        Str8Lit("Split Panel Down"),
+        Str8Lit("Makes a new panel below the focused panel."),
+        Str8Lit("split,pane,side"),
+        APP_COMMAND_KIND_FLAG_LIST_IN_UI,
+        APP_ICON_KIND_DOWN_ARROW
+    },
+    {
+        Str8Lit("split_panel"),
+        Str8Lit("Split Panel"),
+        Str8Lit("Makes a new panel and moves a tab into it."),
+        Str8Lit(""),
+        0,
+        APP_ICON_KIND_NULL
+    },
+    {
         Str8Lit("next_panel"),
         Str8Lit("Next Panel"),
         Str8Lit("Moves the focus to the next panel."),
@@ -167,6 +209,14 @@ AppCommandKindInfo APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_COUNT] = {
         APP_ICON_KIND_RIGHT_ARROW
     },
     {
+        Str8Lit("close_panel"),
+        Str8Lit("Close Panel"),
+        Str8Lit("Closes the panel and all of its tabs."),
+        Str8Lit("split,pane"),
+        APP_COMMAND_KIND_FLAG_LIST_IN_UI,
+        APP_ICON_KIND_X
+    },
+    {
         Str8Lit("focus_tab"),
         Str8Lit("Focus Tab"),
         Str8Lit("Shows a tab."),
@@ -228,12 +278,53 @@ AppCommandKindInfo APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_COUNT] = {
         APP_ICON_KIND_NULL
     },
     {
+        Str8Lit("duplicate_tab"),
+        Str8Lit("Duplicate Tab"),
+        Str8Lit("Makes a copy of the tab."),
+        Str8Lit("copy,clone"),
+        APP_COMMAND_KIND_FLAG_LIST_IN_UI | APP_COMMAND_KIND_FLAG_LIST_IN_TAB,
+        APP_ICON_KIND_ADD
+    },
+    {
         Str8Lit("close_tab"),
         Str8Lit("Close Tab"),
         Str8Lit("Closes the tab."),
         Str8Lit(""),
         APP_COMMAND_KIND_FLAG_LIST_IN_UI | APP_COMMAND_KIND_FLAG_LIST_IN_TAB,
         APP_ICON_KIND_X
+    },
+    {
+        Str8Lit("move_view"),
+        Str8Lit("Move View"),
+        Str8Lit("Moves a tab to a position in a panel."),
+        Str8Lit(""),
+        0,
+        APP_ICON_KIND_NULL
+    },
+    {
+        Str8Lit("set_tab_view"),
+        Str8Lit("Set Tab View"),
+        Str8Lit("Changes the view that the tab is currently showing."),
+        Str8Lit(""),
+        0,
+        APP_ICON_KIND_NULL
+    },
+    {
+        Str8Lit("change_file"),
+        Str8Lit("Change File"),
+        Str8Lit("Changes the tlog file that the tab is showing."),
+        Str8Lit("file,tlog,load"),
+        APP_COMMAND_KIND_FLAG_LIST_IN_UI | APP_COMMAND_KIND_FLAG_LIST_IN_TAB,
+        APP_ICON_KIND_FILE,
+        {
+            (
+                APP_QUERY_KIND_ALLOW_FILES | 
+                APP_QUERY_KIND_FLOATING | 
+                APP_QUERY_KIND_REQUIRED
+            ),
+            APP_REGISTERS_SLOT_FILE_PATH,
+            Str8Lit("")
+        }
     },
     {
         Str8Lit("set_current_path"),
@@ -807,7 +898,7 @@ AppCommandKindInfo APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_COUNT] = {
     }
 };
 
-BindingTableEntry APP_DEFAULT_BINDING_TABLE[79] = {
+BindingTableEntry APP_DEFAULT_BINDING_TABLE[82] = {
     {
         Str8Lit("exit"),
         {
@@ -904,6 +995,31 @@ BindingTableEntry APP_DEFAULT_BINDING_TABLE[79] = {
         {
             INPUT_KIND_W,
             INPUT_MOD_KIND_CTRL
+        }
+    },
+    {
+        Str8Lit("new_panel_right"),
+        {
+            INPUT_KIND_P,
+            INPUT_MOD_KIND_CTRL
+        }
+    },
+    {
+        Str8Lit("new_panel_down"),
+        {
+            INPUT_KIND_MINUS,
+            INPUT_MOD_KIND_CTRL
+        }
+    },
+    {
+        Str8Lit("close_panel"),
+        {
+            INPUT_KIND_P,
+            (
+                INPUT_MOD_KIND_CTRL |
+                INPUT_MOD_KIND_SHIFT |
+                INPUT_MOD_KIND_ALT
+            )
         }
     },
     {
@@ -1388,13 +1504,13 @@ Str8 APP_ICON_KIND_TEXT_TABLE[APP_ICON_KIND_COUNT] = {
 };
 
 Str8 APP_THEME_PRESET_DISPLAY_STR_TABLE[APP_THEME_PRESET_COUNT] = {
-    Str8Lit("Far Manager"),
+    Str8Lit("Ayu Dark"),
     Str8Lit("Default Dark"),
     Str8Lit("Default Light")
 };
 
 Str8 APP_THEME_PRESET_CODE_STR_TABLE[APP_THEME_PRESET_COUNT] = {
-    Str8Lit("far_manager"),
+    Str8Lit("ayu_dark"),
     Str8Lit("default_dark"),
     Str8Lit("default_light")
 };
@@ -1402,40 +1518,47 @@ Str8 APP_THEME_PRESET_CODE_STR_TABLE[APP_THEME_PRESET_COUNT] = {
 Str8 APP_THEME_PRESET_CONFIG_STR_TABLE[APP_THEME_PRESET_COUNT] = {
     Str8Lit(
         "theme:\n{\n"
-        "  theme_colour:{tags: background, value: 0x0000aaff}\n"
-        "  theme_colour:{tags: text, value: 0xaaaaaaff}\n"
-        "  theme_colour:{tags: \"weak text\", value: 0x00aaaaff}\n"
-        "  theme_colour:{tags: \"good text\", value: 0x55ff55ff}\n"
-        "  theme_colour:{tags: \"bad text\", value: 0xff5555ff}\n"
-        "  theme_colour:{tags: border, value: 0xaaaaaaff}\n"
-        "  theme_colour:{tags: hover, value: 0xffffffff}\n"
-        "  theme_colour:{tags: focus, value: 0xffff55ff}\n"
+        "  theme_colour:{tags: background, value: 0x0a0e14ff}\n"
+        "  theme_colour:{tags: text, value: 0xb3b1adff}\n"
+        "  theme_colour:{tags: \"weak text\", value: 0x5c6773ff}\n"
+        "  theme_colour:{tags: \"good text\", value: 0xc2d94cff}\n"
+        "  theme_colour:{tags: \"bad text\", value: 0xf07178ff}\n"
+        "  theme_colour:{tags: border, value: 0x393f4cff}\n"
+        "  theme_colour:{tags: hover, value: 0xe6e4e1ff}\n"
+        "  theme_colour:{tags: focus, value: 0xffb454ff}\n"
         "  theme_colour:{tags: overlay, value: 0x00000080}\n"
-        "  theme_colour:{tags: fuzzy_match, value: 0xffff55ff}\n"
-        "  theme_colour:{tags: accent, value: 0x00aaaaff}\n"
-        "  theme_colour:{tags: selection, value: 0xffffff66}\n"
-        "  theme_colour:{tags: cursor, value: 0xffffffff}\n"
-        "  theme_colour:{tags: \"pop background\", value: 0x00aaaaff}\n"
-        "  theme_colour:{tags: \"pop text\", value: 0x000000ff}\n"
-        "  theme_colour:{tags: \"floating background\", value: 0xaaaaaaff}\n"
-        "  theme_colour:{tags: \"floating text\", value: 0x000000ff}\n"
-        "  theme_colour:{tags: \"floating border\", value: 0x000000ff}\n"
-        "  theme_colour:{tags: \"floating hover\", value: 0x000000ff}\n"
-        "  theme_colour:{tags: \"floating weak text\", value: 0x555555ff}\n"
-        "  theme_colour:{tags: \"floating fuzzy_match\", value: 0xaa0000ff}\n"
-        "  theme_colour:{tags: \"floating pop background\", value: 0x00aaaaff}\n"
-        "  theme_colour:{tags: \"floating pop text\", value: 0x000000ff}\n"
-        "  theme_colour:{tags: \"menu_bar background\", value: 0xaaaaaaff}\n"
-        "  theme_colour:{tags: \"menu_bar text\", value: 0x000000ff}\n"
-        "  theme_colour:{tags: \"menu_bar hover\", value: 0x000000ff}\n"
-        "  theme_colour:{tags: \"menu_bar weak text\", value: 0x555555ff}\n"
-        "  theme_colour:{tags: \"menu_bar bad text\", value: 0xaa0000ff}\n"
-        "  theme_colour:{tags: \"tab background\", value: 0x00aaaaff}\n"
-        "  theme_colour:{tags: \"tab text\", value: 0x000000ff}\n"
-        "  theme_colour:{tags: \"tab inactive background\", value: 0x000080ff}\n"
-        "  theme_colour:{tags: \"tab inactive text\", value: 0xaaaaaaff}\n"
-        "  theme_colour:{tags: \"scroll_bar background\", value: 0x000055ff}\n"
-        "  theme_colour:{tags: \"scroll_bar accent\", value: 0xffffffff}\n"
+        "  theme_colour:{tags: fuzzy_match, value: 0x59c2ffff}\n"
+        "  theme_colour:{tags: accent, value: 0xffb454ff}\n"
+        "  theme_colour:{tags: selection, value: 0x59c2ff40}\n"
+        "  theme_colour:{tags: cursor, value: 0xffb454ff}\n"
+        "  theme_colour:{tags: \"alt background\", value: 0x131721ff}\n"
+        "  theme_colour:{tags: \"pop background\", value: 0x27374eff}\n"
+        "  theme_colour:{tags: \"pop text\", value: 0xe6e4e1ff}\n"
+        "  theme_colour:{tags: \"pop weak text\", value: 0x8a9199ff}\n"
+        "  theme_colour:{tags: \"floating background\", value: 0x131721ff}\n"
+        "  theme_colour:{tags: \"floating text\", value: 0xb3b1adff}\n"
+        "  theme_colour:{tags: \"floating border\", value: 0x393f4cff}\n"
+        "  theme_colour:{tags: \"floating hover\", value: 0xe6e4e1ff}\n"
+        "  theme_colour:{tags: \"floating weak text\", value: 0x5c6773ff}\n"
+        "  theme_colour:{tags: \"floating fuzzy_match\", value: 0x59c2ffff}\n"
+        "  theme_colour:{tags: \"floating alt background\", value: 0x0a0e14ff}\n"
+        "  theme_colour:{tags: \"floating pop background\", value: 0x27374eff}\n"
+        "  theme_colour:{tags: \"floating pop text\", value: 0xe6e4e1ff}\n"
+        "  theme_colour:{tags: \"menu_bar background\", value: 0x131721ff}\n"
+        "  theme_colour:{tags: \"menu_bar text\", value: 0xb3b1adff}\n"
+        "  theme_colour:{tags: \"menu_bar hover\", value: 0xe6e4e1ff}\n"
+        "  theme_colour:{tags: \"menu_bar weak text\", value: 0x5c6773ff}\n"
+        "  theme_colour:{tags: \"menu_bar bad text\", value: 0xf07178ff}\n"
+        "  theme_colour:{tags: \"menu_bar alt background\", value: 0x1f2430ff}\n"
+        "  theme_colour:{tags: \"tab background\", value: 0xffb454ff}\n"
+        "  theme_colour:{tags: \"tab text\", value: 0x0a0e14ff}\n"
+        "  theme_colour:{tags: \"tab inactive background\", value: 0x131721ff}\n"
+        "  theme_colour:{tags: \"tab inactive text\", value: 0xb3b1adff}\n"
+        "  theme_colour:{tags: \"tab unfocused background\", value: 0x27374eff}\n"
+        "  theme_colour:{tags: \"tab unfocused text\", value: 0xe6e4e1ff}\n"
+        "  theme_colour:{tags: \"scroll_bar background\", value: 0x1f2430ff}\n"
+        "  theme_colour:{tags: \"scroll_bar accent\", value: 0xffb454ff}\n"
+        "  theme_colour:{tags: \"drop_site background\", value: 0xffb45440}\n"
         "}\n"
     ),
     Str8Lit(
@@ -1453,6 +1576,7 @@ Str8 APP_THEME_PRESET_CONFIG_STR_TABLE[APP_THEME_PRESET_COUNT] = {
         "  theme_colour:{tags: accent, value: 0x355b6eff}\n"
         "  theme_colour:{tags: selection, value: 0xffffff30}\n"
         "  theme_colour:{tags: cursor, value: 0xffffffff}\n"
+        "  theme_colour:{tags: \"alt background\", value: 0x2b2b2bff}\n"
         "  theme_colour:{tags: \"pop background\", value: 0x355b6eff}\n"
         "  theme_colour:{tags: \"pop text\", value: 0xffffffff}\n"
         "  theme_colour:{tags: \"floating background\", value: 0x222222ff}\n"
@@ -1461,6 +1585,7 @@ Str8 APP_THEME_PRESET_CONFIG_STR_TABLE[APP_THEME_PRESET_COUNT] = {
         "  theme_colour:{tags: \"floating hover\", value: 0xffffffff}\n"
         "  theme_colour:{tags: \"floating weak text\", value: 0xa4a4a4ff}\n"
         "  theme_colour:{tags: \"floating fuzzy_match\", value: 0x3a90bbff}\n"
+        "  theme_colour:{tags: \"floating alt background\", value: 0x1b1b1bff}\n"
         "  theme_colour:{tags: \"floating pop background\", value: 0x355b6eff}\n"
         "  theme_colour:{tags: \"floating pop text\", value: 0xffffffff}\n"
         "  theme_colour:{tags: \"menu_bar background\", value: 0x222222ff}\n"
@@ -1474,6 +1599,10 @@ Str8 APP_THEME_PRESET_CONFIG_STR_TABLE[APP_THEME_PRESET_COUNT] = {
         "  theme_colour:{tags: \"tab inactive text\", value: 0xa4a4a4ff}\n"
         "  theme_colour:{tags: \"scroll_bar background\", value: 0x222222ff}\n"
         "  theme_colour:{tags: \"scroll_bar accent\", value: 0xa4a4a4ff}\n"
+        "  theme_colour:{tags: \"menu_bar alt background\", value: 0x333333ff}\n"
+        "  theme_colour:{tags: \"tab unfocused background\", value: 0x2c3e48ff}\n"
+        "  theme_colour:{tags: \"tab unfocused text\", value: 0xe5e5e5ff}\n"
+        "  theme_colour:{tags: \"drop_site background\", value: 0x3a90bb40}\n"
         "}\n"
     ),
     Str8Lit(
@@ -1491,6 +1620,7 @@ Str8 APP_THEME_PRESET_CONFIG_STR_TABLE[APP_THEME_PRESET_COUNT] = {
         "  theme_colour:{tags: accent, value: 0x5aabd9ff}\n"
         "  theme_colour:{tags: selection, value: 0x00000030}\n"
         "  theme_colour:{tags: cursor, value: 0x000000ff}\n"
+        "  theme_colour:{tags: \"alt background\", value: 0xefefefff}\n"
         "  theme_colour:{tags: \"pop background\", value: 0xcbe4f2ff}\n"
         "  theme_colour:{tags: \"pop text\", value: 0x000000ff}\n"
         "  theme_colour:{tags: \"floating background\", value: 0xf8f8f8ff}\n"
@@ -1499,6 +1629,7 @@ Str8 APP_THEME_PRESET_CONFIG_STR_TABLE[APP_THEME_PRESET_COUNT] = {
         "  theme_colour:{tags: \"floating hover\", value: 0x000000ff}\n"
         "  theme_colour:{tags: \"floating weak text\", value: 0x727272ff}\n"
         "  theme_colour:{tags: \"floating fuzzy_match\", value: 0x1a5b7cff}\n"
+        "  theme_colour:{tags: \"floating alt background\", value: 0xffffffff}\n"
         "  theme_colour:{tags: \"floating pop background\", value: 0xcbe4f2ff}\n"
         "  theme_colour:{tags: \"floating pop text\", value: 0x000000ff}\n"
         "  theme_colour:{tags: \"menu_bar background\", value: 0x5aabd9ff}\n"
@@ -1512,6 +1643,10 @@ Str8 APP_THEME_PRESET_CONFIG_STR_TABLE[APP_THEME_PRESET_COUNT] = {
         "  theme_colour:{tags: \"tab inactive text\", value: 0x727272ff}\n"
         "  theme_colour:{tags: \"scroll_bar background\", value: 0xf8f8f8ff}\n"
         "  theme_colour:{tags: \"scroll_bar accent\", value: 0x727272ff}\n"
+        "  theme_colour:{tags: \"menu_bar alt background\", value: 0x8ec6e6ff}\n"
+        "  theme_colour:{tags: \"tab unfocused background\", value: 0xe3e3e3ff}\n"
+        "  theme_colour:{tags: \"tab unfocused text\", value: 0x000000ff}\n"
+        "  theme_colour:{tags: \"drop_site background\", value: 0x1a5b7c40}\n"
         "}\n"
     )
 };
@@ -1545,6 +1680,48 @@ CopyRegisters(Arena* MemPool, AppRegisters* Regs)
     CopyRegisters(MemPool, Result, Regs);
 
     return Result;
+}
+
+b32
+AppDragIsActive(void)
+{
+    return (
+        APP_STATE->DragDropState == APP_DRAG_DROP_STATE_DRAGGING ||
+        APP_STATE->DragDropState == APP_DRAG_DROP_STATE_DROPPING
+    );
+}
+
+void
+AppDragBegin(AppRegistersSlot Slot)
+{
+    if (!AppDragIsActive()) {
+        ArenaClear(APP_STATE->DragDropMemPool);
+        APP_STATE->DragDropRegisters = CopyRegisters(
+            APP_STATE->DragDropMemPool,
+            Registers()
+        );
+        APP_STATE->DragDropRegistersSlot = Slot;
+        APP_STATE->DragDropState = APP_DRAG_DROP_STATE_DRAGGING;
+    }
+}
+
+b32
+AppDragDrop(void)
+{
+    b32 Result = FALSE;
+
+    if (APP_STATE->DragDropState == APP_DRAG_DROP_STATE_DROPPING) {
+        Result = TRUE;
+        APP_STATE->DragDropState = APP_DRAG_DROP_STATE_NULL;
+    }
+
+    return Result;
+}
+
+void
+AppDragKill(void)
+{
+    APP_STATE->DragDropState = APP_DRAG_DROP_STATE_NULL;
 }
 
 void 
@@ -2112,7 +2289,7 @@ AppThemeTreeFromName(Arena* MemPool, Access* Acc, Str8 Name)
     }
 
     if (Result == EMPTY_MD_NODE_VALUE)
-        Result = APP_STATE->ThemePresetTrees[APP_THEME_PRESET_FAR_MANAGER];
+        Result = APP_STATE->ThemePresetTrees[APP_THEME_PRESET_AYU_DARK];
 
     return Result;
 }
@@ -2292,20 +2469,20 @@ AppQueryViewUI(r2f32 Rect)
     u64 RowsCount = 0;
 
     for (AppQueryResultNode* N = Results.Head; N; N = N->Next) {
+        FMRangeList NameMatches = FuzzyFind(
+            Scratch.MemPool,
+            Needle,
+            N->V.DisplayString
+        );
+        FMRangeList TagsMatches = FuzzyFind(
+            Scratch.MemPool,
+            Needle,
+            N->V.SearchTags
+        );
+
         if (
-            !Needle.Size ||
-            StrFindSubStr(
-                N->V.DisplayString, 
-                Needle, 
-                0, 
-                STR_MATCH_ALL_CASES
-            ) < N->V.DisplayString.Size ||
-            StrFindSubStr(
-                N->V.SearchTags, 
-                Needle, 
-                0, 
-                STR_MATCH_ALL_CASES
-            ) < N->V.SearchTags.Size
+            NameMatches.Count == NameMatches.StrPartCount ||
+            TagsMatches.Count == TagsMatches.StrPartCount
         ) {
             Rows[RowsCount++] = &N->V;
         }
@@ -2322,6 +2499,7 @@ AppQueryViewUI(r2f32 Rect)
     );
     AppQueryResult* Accepted = NULL;
     b32 IsAccepted = FALSE;
+    UISignal EditSig = {};
 
     APP_STATE->TextEditMode = TRUE;
     APP_STATE->QueryListCursor.Y = MIN(
@@ -2335,27 +2513,61 @@ AppQueryViewUI(r2f32 Rect)
             UISetNextFlags(UI_BOX_KIND_DRAW_DROP_SHADOW);
 
             UIPane(ListerRect, "###query_lister"_s8) {
+                Str8 InputPreEdit = ArenaPushStrCpy(Scratch.MemPool, Input);
+
+                UISpacer(UI_PX(1.0f, 1.0f));
+                UISetNextPreferredHeight(UI_PX(ListHeight + 2.0f, 1.0f));
+                UIRowBegin();
+                UISpacer(UI_PX(1.0f, 1.0f));
+                UISetNextPreferredWidth(UI_PX(Width - 2.0f, 1.0f));
+                UISetNextPreferredHeight(UI_PERCENT(1.0f, 0.0f));
+                UIColumnBegin();
+
                 UIWidthFill() {
-                    UIRow() {
+                    UINamedRow("###query_input_row"_s8) {
+                        UIBox* InputRow = UIHeadParent();
+                        UIKey InputKey = UIKeyFromStr(
+                            InputRow->Key,
+                            "###query_input"_s8
+                        );
+
+                        InputRow->DefaultNavFocusActiveKey = InputKey;
+                        InputRow->DefaultNavFocusNextActiveKey = InputKey;
+
                         UIPreferredWidth(UI_TEXT_DIM(2.0f, 1.0f)) {
                             UITag("weak"_s8) {
-                                UILabel(
-                                    CommandName.Size 
-                                        ? Info->DisplayName 
-                                        : "Command"_s8
-                                );
+                                UILabel(APP_ICON_KIND_TEXT_TABLE[APP_ICON_KIND_FIND]);
+
+                                if (CommandName.Size)
+                                    UILabel(Info->DisplayName);
                             }
                         }
 
-                        UILineEdit(
-                            &APP_STATE->QueryCursor,
-                            &APP_STATE->QueryMark,
-                            APP_STATE->QueryBuffer,
-                            sizeof(APP_STATE->QueryBuffer),
-                            &APP_STATE->QueryStringSize,
-                            Input,
-                            "###query_input"_s8
-                        );
+                        UITag("alt"_s8) {
+                            EditSig = UILineEdit(
+                                &APP_STATE->QueryCursor,
+                                &APP_STATE->QueryMark,
+                                APP_STATE->QueryBuffer,
+                                sizeof(APP_STATE->QueryBuffer),
+                                &APP_STATE->QueryStringSize,
+                                Input,
+                                "###query_input"_s8
+                            );
+                        }
+                    }
+
+                    if (
+                        !StrMatch(
+                            InputPreEdit,
+                            Str(APP_STATE->QueryBuffer, APP_STATE->QueryStringSize),
+                            0
+                        )
+                    ) {
+                        APP_STATE->QueryListCursor = {};
+                        APP_STATE->QueryListCursor.Y = IsFilePath ? 0 : 1;
+                        APP_STATE->QueryListMark = APP_STATE->QueryListCursor;
+                        APP_STATE->QueryScroll = {};
+                        AppRequestFrame();
                     }
 
                     UIDivider(UI_PX(1.0f, 1.0f));
@@ -2395,24 +2607,6 @@ AppQueryViewUI(r2f32 Rect)
                             );
                             Str8 Note = Entry->Description;
 
-                            if (Entry->CommandInfo) {
-                                ConfigInputMapNodePtrList InputMapNodes = ConfigInputMapNodePtrListFromName(
-                                    Scratch.MemPool,
-                                    APP_STATE->KeyMap,
-                                    Entry->String
-                                );
-
-                                Note = {};
-
-                                if (InputMapNodes.Head) {
-                                    Note = StrFromInputModifierInput(
-                                        Scratch.MemPool,
-                                        InputMapNodes.Head->V->Binding.ModKind,
-                                        InputMapNodes.Head->V->Binding.Input
-                                    );
-                                }
-                            }
-
                             UITag(
                                 IsCursor 
                                     ? "pop"_s8 
@@ -2450,7 +2644,14 @@ AppQueryViewUI(r2f32 Rect)
                                         );
                                         UISpacer(UI_PERCENT(1.0f, 0.0f));
 
-                                        if (Note.Size) {
+                                        if (Entry->CommandInfo) {
+                                            AppCommandBindingButtons(
+                                                Entry->String,
+                                                ""_s8,
+                                                U64_MAX,
+                                                APP_COMMAND_BINDING_BTN_FLAG_ADD_NEW
+                                            );
+                                        } else if (Note.Size) {
                                             UITag("weak"_s8) {
                                                 UILabel(Note);
                                             }
@@ -2475,6 +2676,9 @@ AppQueryViewUI(r2f32 Rect)
 
                     APP_STATE->QueryScroll.Offset = 0.0f;
                 }
+
+                    UIColumnEnd();
+                    UIRowEnd();
             }
         }
 
@@ -2492,7 +2696,10 @@ AppQueryViewUI(r2f32 Rect)
         if (UISlotPress(UI_EVENT_ACTION_SLOT_CANCEL))
             AppCmd(APP_COMMAND_KIND_CANCEL_QUERY);
 
-        if (UISlotPress(UI_EVENT_ACTION_SLOT_ACCEPT)) {
+        if (
+            UI_COMMITTED(EditSig) ||
+            UISlotPress(UI_EVENT_ACTION_SLOT_ACCEPT)
+        ) {
             IsAccepted = TRUE;
 
             if (APP_STATE->QueryListCursor.Y > 0)
@@ -2640,6 +2847,241 @@ AppMenuBarButton(Str8 String)
     return Result;
 }
 
+void
+AppCommandBindingButtons(
+    Str8 Name,
+    Str8 Filter,
+    u64 Limit,
+    AppCommandBindingButtonFlag Flags
+) {
+    TempArena Scratch = GetScratch(NULL, 0);
+    ConfigInputMapNodePtrList InputMapNodes = ConfigInputMapNodePtrListFromName(
+        Scratch.MemPool,
+        APP_STATE->KeyMap,
+        Name
+    );
+    u64 InputMapIndex = 0;
+
+    for (
+        ConfigInputMapNodePtr* N = InputMapNodes.Head;
+        N && InputMapIndex < Limit;
+        N = N->Next
+    ) {
+        ConfigBinding Binding = N->V->Binding;
+
+        if (Binding.Input == INPUT_KIND_NULL)
+            continue;
+
+        ++InputMapIndex;
+        UISpacer(UI_PX(1.0f, 1.0f));
+
+        b32 RebindingActiveForThisBinding = (
+            APP_STATE->BindChangeActive &&
+            StrMatch(APP_STATE->BindChangeCommandName, Name, 0) &&
+            N->V->ID == APP_STATE->BindChangeBindingID
+        );
+        b32 IsReserved = (
+            !Binding.ModKind &&
+            (
+                Binding.Input == INPUT_KIND_ESC ||
+                Binding.Input == INPUT_KIND_DELETE
+            )
+        );
+        b32 CanEdit = (
+            !(Flags & APP_COMMAND_BINDING_BTN_FLAG_NO_EDIT) &&
+            !IsReserved
+        );
+        b32 HasConflicts = FALSE;
+        ConfigInputMapNodePtrList NodesWithThisBinding = ConfigInputMapNodePtrListFromBinding(
+            Scratch.MemPool,
+            APP_STATE->KeyMap,
+            Binding
+        );
+
+        for (
+            ConfigInputMapNodePtr* N2 = NodesWithThisBinding.Head;
+            N2;
+            N2 = N2->Next
+        ) {
+            if (!StrMatch(N->V->Name, N2->V->Name, 0)) {
+                HasConflicts = TRUE;
+                break;
+            }
+        }
+
+        Str8 KeyBindingString = RebindingActiveForThisBinding
+            ? "\xE2\x80\xA6"_s8
+            : StrFromInputModifierInput(
+                Scratch.MemPool,
+                Binding.ModKind,
+                Binding.Input
+            );
+        FMRangeList Matches = {};
+
+        if (Filter.Size)
+            Matches = FuzzyFind(Scratch.MemPool, Filter, KeyBindingString);
+
+        UISetNextTag(
+            RebindingActiveForThisBinding
+                ? "pop"_s8
+                : HasConflicts
+                    ? "bad"_s8
+                    : "alt"_s8
+        );
+        UISetNextTextAlignment(UI_TEXT_ALIGN_CENTRE);
+        UISetNextGroupKey(EMPTY_UI_KEY_VALUE);
+        UISetNextFastpathCodepoint(0);
+        UISetNextPreferredWidth(UI_TEXT_DIM(0.0f, 1.0f));
+
+        UIBox* Box = UIBuildBoxFromStrFmt(
+            (
+                UI_BOX_KIND_DRAW_TEXT |
+                UI_BOX_KIND_DRAW_BACKGROUND |
+                UI_BOX_KIND_FOCUS_NAV_SKIP |
+                (
+                    CanEdit * (
+                        UI_BOX_KIND_MOUSE_CLICKABLE |
+                        UI_BOX_KIND_DRAW_HOT_EFFECTS |
+                        UI_BOX_KIND_DRAW_ACTIVE_EFFECTS
+                    )
+                )
+            ),
+            "%S###bind_btn_%S_%x_%x",
+            PRINT_STR(KeyBindingString),
+            PRINT_STR(Name),
+            Binding.Input,
+            Binding.ModKind
+        );
+
+        if (Filter.Size)
+            UIBoxEquipFuzzyMatchRanges(Box, &Matches);
+
+        UISignal Sig = UISignalFromBox(Box);
+
+        if (!APP_STATE->BindChangeActive && UI_CLICKED(Sig)) {
+            ArenaClear(APP_STATE->BindChangeMemPool);
+            APP_STATE->BindChangeActive = TRUE;
+            APP_STATE->BindChangeCommandName = ArenaPushStrCpy(
+                APP_STATE->BindChangeMemPool,
+                Name
+            );
+            APP_STATE->BindChangeBindingID = N->V->ID;
+            APP_STATE->BindChangeUIKey = Box->Key;
+        } else if (APP_STATE->BindChangeActive && UI_CLICKED(Sig)) {
+            APP_STATE->BindChangeActive = FALSE;
+        }
+
+        if (UI_HOVERING(Sig) && HasConflicts) {
+            UITooltip() {
+                UILabel("Other commands that have this key:"_s8);
+
+                for (
+                    ConfigInputMapNodePtr* N2 = NodesWithThisBinding.Head;
+                    N2;
+                    N2 = N2->Next
+                ) {
+                    if (!StrMatch(N2->V->Name, N->V->Name, 0))
+                        UILabel(AppCommandKindInfoFromStr(N2->V->Name)->DisplayName);
+                }
+            }
+        }
+
+        if (RebindingActiveForThisBinding) {
+            UISetNextTag("bad"_s8);
+            UISetNextTextAlignment(UI_TEXT_ALIGN_CENTRE);
+            UISetNextGroupKey(EMPTY_UI_KEY_VALUE);
+            UISetNextFastpathCodepoint(0);
+            UISetNextPreferredWidth(UI_PX(3.0f, 1.0f));
+
+            UIBox* RemoveBox = UIBuildBoxFromStrFmt(
+                (
+                    UI_BOX_KIND_DRAW_TEXT |
+                    UI_BOX_KIND_DRAW_BACKGROUND |
+                    UI_BOX_KIND_FOCUS_NAV_SKIP |
+                    UI_BOX_KIND_MOUSE_CLICKABLE |
+                    UI_BOX_KIND_DRAW_HOT_EFFECTS |
+                    UI_BOX_KIND_DRAW_ACTIVE_EFFECTS
+                ),
+                "%S###remove_binding_%S",
+                PRINT_STR(APP_ICON_KIND_TEXT_TABLE[APP_ICON_KIND_X]),
+                PRINT_STR(Name)
+            );
+
+            if (UI_PRESSED(UISignalFromBox(RemoveBox))) {
+                ConfigNodeRelease(
+                    APP_STATE->Config,
+                    ConfigNodeFromID(APP_STATE->BindChangeBindingID)
+                );
+                APP_STATE->BindChangeActive = FALSE;
+            }
+        }
+    }
+
+    if (Flags & APP_COMMAND_BINDING_BTN_FLAG_ADD_NEW) {
+        b32 AddingNewBinding = (
+            APP_STATE->BindChangeActive &&
+            StrMatch(APP_STATE->BindChangeCommandName, Name, 0) &&
+            !APP_STATE->BindChangeBindingID
+        );
+
+        UISpacer(UI_PX(1.0f, 1.0f));
+        UISetNextTag(AddingNewBinding ? "pop"_s8 : "alt"_s8);
+        UISetNextTextAlignment(UI_TEXT_ALIGN_CENTRE);
+        UISetNextGroupKey(EMPTY_UI_KEY_VALUE);
+        UISetNextFastpathCodepoint(0);
+        UISetNextPreferredWidth(UI_PX(3.0f, 1.0f));
+
+        Str8 BindingString = (AddingNewBinding) 
+            ? "\xE2\x80\xA6"_s8 
+            : APP_ICON_KIND_TEXT_TABLE[APP_ICON_KIND_ADD];
+        UIBox* Box = UIBuildBoxFromStrFmt(
+            (
+                UI_BOX_KIND_DRAW_TEXT |
+                UI_BOX_KIND_DRAW_BACKGROUND |
+                UI_BOX_KIND_FOCUS_NAV_SKIP |
+                UI_BOX_KIND_MOUSE_CLICKABLE |
+                UI_BOX_KIND_DRAW_HOT_EFFECTS |
+                UI_BOX_KIND_DRAW_ACTIVE_EFFECTS
+            ),
+            "%S###add_binding_%S",
+            PRINT_STR(BindingString),
+            PRINT_STR(Name)
+        );
+
+        // UIBox* Box = UIBuildBoxFromStrFmt(
+        //     (
+        //         UI_BOX_KIND_DRAW_TEXT |
+        //         UI_BOX_KIND_DRAW_BACKGROUND |
+        //         UI_BOX_KIND_FOCUS_NAV_SKIP |
+        //         UI_BOX_KIND_MOUSE_CLICKABLE |
+        //         UI_BOX_KIND_DRAW_HOT_EFFECTS |
+        //         UI_BOX_KIND_DRAW_ACTIVE_EFFECTS
+        //     ),
+        //     "%S###add_binding_%S",
+        //     AddingNewBinding
+        //         ? PRINT_STR("\xE2\x80\xA6"_s8)
+        //         : PRINT_STR(APP_ICON_KIND_TEXT_TABLE[APP_ICON_KIND_ADD]),
+        //     PRINT_STR(Name)
+        // );
+        UISignal Sig = UISignalFromBox(Box);
+
+        if (!AddingNewBinding && UI_CLICKED(Sig)) {
+            ArenaClear(APP_STATE->BindChangeMemPool);
+            APP_STATE->BindChangeActive = TRUE;
+            APP_STATE->BindChangeCommandName = ArenaPushStrCpy(
+                APP_STATE->BindChangeMemPool,
+                Name
+            );
+            APP_STATE->BindChangeBindingID = 0;
+            APP_STATE->BindChangeUIKey = Box->Key;
+        } else if (AddingNewBinding && UI_CLICKED(Sig)) {
+            APP_STATE->BindChangeActive = FALSE;
+        }
+    }
+
+    ReleaseScratch(Scratch);
+}
+
 UISignal 
 AppCommandSpecButton(Str8 Name)
 {
@@ -2673,17 +3115,20 @@ AppCommandSpecButton(Str8 Name)
             }
 
             UISpacer(UI_PERCENT(1.0f, 0.0f));
+            UISetNextFlags(
+                UI_BOX_KIND_MOUSE_CLICKABLE | UI_BOX_KIND_FOCUS_NAV_SKIP
+            );
+            UISetNextGroupKey(EMPTY_UI_KEY_VALUE);
 
-            if (InputMapNodes.Head) {
-                ConfigBinding Binding = InputMapNodes.Head->V->Binding;
-
-                UITag("weak"_s8) {
-                    UILabel(
-                        StrFromInputModifierInput(
-                            Scratch.MemPool,
-                            Binding.ModKind,
-                            Binding.Input
-                        )
+            UIPreferredWidth(UI_SUM_OF_CHILDREN(1.0f)) {
+                UINamedRow("###bindings"_s8) {
+                    AppCommandBindingButtons(
+                        Name,
+                        ""_s8,
+                        1,
+                        InputMapNodes.Head
+                            ? 0
+                            : APP_COMMAND_BINDING_BTN_FLAG_ADD_NEW
                     );
                 }
             }
@@ -2703,21 +3148,35 @@ AppCommandListMenuButtons(
     u64 CommandNamesCount, 
     u32* FastPointCodePoints
 ) {
-    for (u64 Index = 0; Index < CommandNamesCount; ++Index) {
-        if (!CommandNames[Index].Size) {
-            UIDivider(UI_PX(1.0f, 1.0f));
-        } else {
-            UISetNextFastpathCodepoint(FastPointCodePoints[Index]);
+    UISetNextPreferredHeight(UI_SUM_OF_CHILDREN(1.0f));
 
-            UISignal Sig = AppCommandSpecButton(CommandNames[Index]);
-
-            if (UI_CLICKED(Sig)) {
-                AppCmd(
-                    APP_COMMAND_KIND_RUN_COMMAND,
-                    __Registers.CommandName = CommandNames[Index]
+    UIColumn() {
+        for (u64 Index = 0; Index < CommandNamesCount; ++Index) {
+            if (!CommandNames[Index].Size) {
+                UIDivider(UI_PX(1.0f, 1.0f));
+            } else {
+                AppCommandKind Kind = AppCommandKindFromStr(CommandNames[Index]);
+                b32 IsDisabled = (
+                    Kind >= APP_COMMAND_KIND_FIRST_TAB_FAST_PATH_CMD &&
+                    APP_COMMAND_KIND_INFO_TABLE[Kind].Flags & APP_COMMAND_KIND_FLAG_LIST_IN_FILE &&
+                    !Registers()->FilePath.Size
                 );
-                UIContextMenuClose();
-                APP_STATE->MenuBarFocused = FALSE;
+
+                if (IsDisabled)
+                    UISetNextFlags(UI_BOX_KIND_DISABLED);
+
+                UISetNextFastpathCodepoint(FastPointCodePoints[Index]);
+
+                UISignal Sig = AppCommandSpecButton(CommandNames[Index]);
+
+                if (UI_CLICKED(Sig) && !IsDisabled) {
+                    AppCmd(
+                        APP_COMMAND_KIND_RUN_COMMAND,
+                        __Registers.CommandName = CommandNames[Index]
+                    );
+                    UIContextMenuClose();
+                    APP_STATE->MenuBarFocused = FALSE;
+                }
             }
         }
     }
@@ -2754,6 +3213,13 @@ AppInit(CommandLine* CLI)
 
     APP_STATE->PopUpMemPool = ArenaAlloc();
     APP_STATE->QueryMemPool = ArenaAlloc();
+    APP_STATE->DragDropMemPool = ArenaAlloc();
+    APP_STATE->DragDropRegisters = ArenaPushArrayZero(
+        APP_STATE->DragDropMemPool,
+        AppRegisters,
+        1
+    );
+    APP_STATE->BindChangeMemPool = ArenaAlloc();
     APP_STATE->HeadRegisters = &APP_STATE->BaseRegisters;
     APP_STATE->UI = UIStateAlloc();
 
@@ -2847,7 +3313,7 @@ AppInit(CommandLine* CLI)
         );
 
         if (!ThemeName.Size)
-            ThemeName = APP_THEME_PRESET_DISPLAY_STR_TABLE[APP_THEME_PRESET_FAR_MANAGER];
+            ThemeName = APP_THEME_PRESET_DISPLAY_STR_TABLE[APP_THEME_PRESET_AYU_DARK];
 
         ConfigNodeNew(APP_STATE->Config, Theme, ThemeName);
     }
@@ -3055,6 +3521,99 @@ AppFrame(void)
 
     u64 StartTimeUSecs = TimeNow();
 
+    if (!APP_STATE->PopUpActive && APP_STATE->BindChangeActive) {
+        if (InputPress(&Events, 0, INPUT_KIND_ESC)) {
+            AppRequestFrame();
+            APP_STATE->BindChangeActive = FALSE;
+        }
+
+        if (
+            APP_STATE->BindChangeActive &&
+            InputPress(&Events, 0, INPUT_KIND_DELETE)
+        ) {
+            AppRequestFrame();
+            ConfigNodeRelease(
+                APP_STATE->Config,
+                ConfigNodeFromID(APP_STATE->BindChangeBindingID)
+            );
+            APP_STATE->BindChangeActive = FALSE;
+        }
+
+        for (
+            InputEvent* Event = Events.Head, *Next = NULL;
+            Event && APP_STATE->BindChangeActive;
+            Event = Next
+        ) {
+            Next = Event->Next;
+
+            if (
+                Event->Kind == EVENT_KIND_PRESS &&
+                Event->Input != INPUT_KIND_ESC &&
+                Event->Input != INPUT_KIND_RETURN &&
+                Event->Input != INPUT_KIND_BACKSPACE &&
+                Event->Input != INPUT_KIND_DELETE &&
+                Event->Input != INPUT_KIND_LEFT_MOUSE_BTN &&
+                Event->Input != INPUT_KIND_RIGHT_MOUSE_BTN &&
+                Event->Input != INPUT_KIND_MIDDLE_MOUSE_BTN &&
+                Event->Input != INPUT_KIND_CTRL &&
+                Event->Input != INPUT_KIND_ALT &&
+                Event->Input != INPUT_KIND_SHIFT
+            ) {
+                APP_STATE->BindChangeActive = FALSE;
+
+                ConfigNode* Binding = ConfigNodeFromID(
+                    APP_STATE->BindChangeBindingID
+                );
+
+                if (Binding == EMPTY_CFG_NODE_VALUE) {
+                    ConfigNode* Session = ConfigNodeChildFromStr(
+                        ConfigNodeRoot(),
+                        "session"_s8
+                    );
+                    ConfigNode* InputBindings = ConfigNodeChildFromStrOrAlloc(
+                        APP_STATE->Config,
+                        Session,
+                        "keybindings"_s8
+                    );
+
+                    Binding = ConfigNodeNew(
+                        APP_STATE->Config,
+                        InputBindings,
+                        ""_s8
+                    );
+                }
+
+                ConfigNodeReleaseAllChildren(APP_STATE->Config, Binding);
+                ConfigNodeNew(
+                    APP_STATE->Config,
+                    Binding,
+                    APP_STATE->BindChangeCommandName
+                );
+                ConfigNodeNew(
+                    APP_STATE->Config,
+                    Binding,
+                    INPUT_DISPLAY_STR_TABLE[Event->Input]
+                );
+
+                if (Event->Modifier & INPUT_MOD_KIND_CTRL)
+                    ConfigNodeNew(APP_STATE->Config, Binding, "ctrl"_s8);
+
+                if (Event->Modifier & INPUT_MOD_KIND_SHIFT)
+                    ConfigNodeNew(APP_STATE->Config, Binding, "shift"_s8);
+
+                if (Event->Modifier & INPUT_MOD_KIND_ALT)
+                    ConfigNodeNew(APP_STATE->Config, Binding, "alt"_s8);
+
+                Text(
+                    &Events,
+                    CodePointFromInput(Event->Modifier, Event->Input)
+                );
+                ConsumeEvent(&Events, Event);
+                AppRequestFrame();
+            }
+        }
+    }
+
     APP_STATE->KeyMap = ConfigInputMapFromConfig(AppFrameMemPool());
 
     for (
@@ -3066,6 +3625,14 @@ AppFrame(void)
             Next = Event->Next;
 
             b32 Take = FALSE;
+
+            if (
+                AppDragIsActive() &&
+                Event->Kind == EVENT_KIND_RELEASE &&
+                Event->Input == INPUT_KIND_LEFT_MOUSE_BTN
+            ) {
+                APP_STATE->DragDropState = APP_DRAG_DROP_STATE_DROPPING;
+            }
 
             if (!Take && Event->Kind == EVENT_KIND_CONSOLE_CLOSE) {
                 Take = TRUE;
@@ -3256,18 +3823,7 @@ AppFrame(void)
                             );
 
                             if (NeedsFile && !Registers()->FilePath.Size) {
-                                Str8 Error = "This view shows one file. Select a file in the Files view first."_s8;
-
-                                APP_STATE->ErrorStrSize = MIN(
-                                    sizeof(APP_STATE->ErrorBuffer), 
-                                    Error.Size
-                                );
-                                MemCpy(
-                                    APP_STATE->ErrorBuffer, 
-                                    Error.Str, 
-                                    APP_STATE->ErrorStrSize
-                                );
-                                APP_STATE->ErrorFrameIndex = APP_STATE->FrameIndex;
+                                AppCmd(APP_COMMAND_KIND_OPEN_FILES);
                             } else {
                                 AppCmd(
                                     APP_COMMAND_KIND_BUILD_TAB,
@@ -3463,6 +4019,236 @@ AppFrame(void)
                                     BindingRoot,
                                     "alt"_s8
                                 );
+                            }
+                        }
+                    } break;
+
+                    case APP_COMMAND_KIND_NEW_PANEL_LEFT:
+                    case APP_COMMAND_KIND_NEW_PANEL_UP:
+                    case APP_COMMAND_KIND_NEW_PANEL_RIGHT:
+                    case APP_COMMAND_KIND_NEW_PANEL_DOWN:
+                    case APP_COMMAND_KIND_SPLIT_PANEL: {
+                        Direction2D SplitDir = DIR_2D_INVALID;
+                        ConfigNode* SplitPanel = ConfigNodeFromID(
+                            Registers()->Panel
+                        );
+
+                        if (Kind == APP_COMMAND_KIND_NEW_PANEL_LEFT) {
+                            SplitDir = DIR_2D_LEFT;
+                        } else if (Kind == APP_COMMAND_KIND_NEW_PANEL_UP) {
+                            SplitDir = DIR_2D_UP;
+                        } else if (Kind == APP_COMMAND_KIND_NEW_PANEL_RIGHT) {
+                            SplitDir = DIR_2D_RIGHT;
+                        } else if (Kind == APP_COMMAND_KIND_NEW_PANEL_DOWN) {
+                            SplitDir = DIR_2D_DOWN;
+                        } else {
+                            SplitDir = Registers()->Direction;
+                            SplitPanel = ConfigNodeFromID(Registers()->DstPanel);
+                        }
+
+                        if (
+                            SplitDir != DIR_2D_INVALID &&
+                            SplitPanel != EMPTY_CFG_NODE_VALUE
+                        ) {
+                            Axis2D SplitAxis = Axis2DFromDir2D(SplitDir);
+                            SideKind SplitSide = SideFromDir2D(SplitDir);
+                            ConfigNode* NewPanelConfig = EMPTY_CFG_NODE_VALUE;
+                            ConfigPanelTree PanelTree = ConfigPanelTreeFromConfig(
+                                Scratch.MemPool,
+                                SplitPanel
+                            );
+                            ConfigPanelNode* Panel = ConfigPanelNodeFromConfigTree(
+                                PanelTree.Root,
+                                SplitPanel
+                            );
+                            ConfigPanelNode* Parent = Panel->Parent;
+
+                            if (
+                                Parent != EMPTY_CFG_PANEL_NODE_VALUE &&
+                                Parent->SplitAxis == SplitAxis
+                            ) {
+                                NewPanelConfig = ConfigNodeAlloc(APP_STATE->Config);
+                                ConfigNodeInsertChild(
+                                    APP_STATE->Config,
+                                    Parent->Config,
+                                    (SplitSide == SIDE_MAX)
+                                        ? SplitPanel
+                                        : SplitPanel->Prev,
+                                    NewPanelConfig
+                                );
+                                ConfigNodeEquipStr(
+                                    APP_STATE->Config,
+                                    NewPanelConfig,
+                                    "%f",
+                                    1.0f / (Parent->ChildCount + 1)
+                                );
+
+                                for (
+                                    ConfigPanelNode* Child = Parent->Head;
+                                    Child != EMPTY_CFG_PANEL_NODE_VALUE;
+                                    Child = Child->Next
+                                ) {
+                                    f32 OldPercent = Child->PercentOfParent;
+                                    f32 NewPercent = OldPercent * ((f32) Parent->ChildCount / (Parent->ChildCount + 1));
+
+                                    ConfigNodeEquipStr(
+                                        APP_STATE->Config,
+                                        Child->Config,
+                                        "%f",
+                                        NewPercent
+                                    );
+                                }
+                            } else {
+                                ConfigNode* SplitPanelPrev = Panel->Prev->Config;
+                                ConfigNode* NewParent = ConfigNodeAlloc(APP_STATE->Config);
+                                ConfigNode* NewSibling = ConfigNodeAlloc(APP_STATE->Config);
+
+                                ConfigNodeEquipStr(
+                                    APP_STATE->Config,
+                                    NewParent,
+                                    SplitPanel->String
+                                );
+                                ConfigNodeEquipStr(
+                                    APP_STATE->Config,
+                                    SplitPanel,
+                                    "0.5"_s8
+                                );
+                                ConfigNodeEquipStr(
+                                    APP_STATE->Config,
+                                    NewSibling,
+                                    "0.5"_s8
+                                );
+
+                                if (Parent->Config != EMPTY_CFG_NODE_VALUE) {
+                                    ConfigNodeUnhook(
+                                        APP_STATE->Config,
+                                        Parent->Config,
+                                        SplitPanel
+                                    );
+                                    ConfigNodeInsertChild(
+                                        APP_STATE->Config,
+                                        Parent->Config,
+                                        SplitPanelPrev,
+                                        NewParent
+                                    );
+                                } else {
+                                    ConfigNode* Window = ConfigWindowFromConfig(
+                                        SplitPanel
+                                    );
+
+                                    ConfigNodeEquipStr(
+                                        APP_STATE->Config,
+                                        NewParent,
+                                        "panels"_s8
+                                    );
+                                    ConfigNodeInsertChild(
+                                        APP_STATE->Config,
+                                        Window,
+                                        Window->Tail,
+                                        NewParent
+                                    );
+
+                                    if (SplitAxis == AXIS_2D_X) {
+                                        ConfigNodeChildFromStrOrAlloc(
+                                            APP_STATE->Config,
+                                            Window,
+                                            "split_x"_s8
+                                        );
+                                    } else {
+                                        ConfigNodeRelease(
+                                            APP_STATE->Config,
+                                            ConfigNodeChildFromStr(
+                                                Window,
+                                                "split_x"_s8
+                                            )
+                                        );
+                                    }
+                                }
+
+                                ConfigNode* Min = SplitPanel;
+                                ConfigNode* Max = NewSibling;
+
+                                if (SplitSide == SIDE_MIN)
+                                    SWAP(ConfigNode*, Min, Max);
+
+                                ConfigNodeInsertChild(
+                                    APP_STATE->Config,
+                                    NewParent,
+                                    NewParent->Tail,
+                                    Min
+                                );
+                                ConfigNodeInsertChild(
+                                    APP_STATE->Config,
+                                    NewParent,
+                                    NewParent->Tail,
+                                    Max
+                                );
+                                NewPanelConfig = NewSibling;
+                            }
+
+                            ConfigNode* DragTab = ConfigNodeFromID(Registers()->View);
+                            ConfigNode* OriginPanel = DragTab->Parent;
+
+                            if (
+                                Kind == APP_COMMAND_KIND_SPLIT_PANEL &&
+                                DragTab != EMPTY_CFG_NODE_VALUE &&
+                                OriginPanel != EMPTY_CFG_NODE_VALUE
+                            ) {
+                                ConfigNodeUnhook(
+                                    APP_STATE->Config,
+                                    OriginPanel,
+                                    DragTab
+                                );
+                                ConfigNodeInsertChild(
+                                    APP_STATE->Config,
+                                    NewPanelConfig,
+                                    NewPanelConfig->Tail,
+                                    DragTab
+                                );
+                                AppCmd(
+                                    APP_COMMAND_KIND_FOCUS_TAB,
+                                    __Registers.Tab = DragTab->ID
+                                );
+                            }
+
+                            AppCmd(
+                                APP_COMMAND_KIND_FOCUS_PANEL,
+                                __Registers.Panel = NewPanelConfig->ID
+                            );
+
+                            if (
+                                Kind == APP_COMMAND_KIND_SPLIT_PANEL &&
+                                DragTab != EMPTY_CFG_NODE_VALUE &&
+                                OriginPanel != EMPTY_CFG_NODE_VALUE
+                            ) {
+                                ConfigPanelTree OriginPanelTree = ConfigPanelTreeFromConfig(
+                                    Scratch.MemPool,
+                                    OriginPanel
+                                );
+                                ConfigPanelNode* OriginPanelNode = ConfigPanelNodeFromConfigTree(
+                                    OriginPanelTree.Root,
+                                    OriginPanel
+                                );
+
+                                if (
+                                    OriginPanelNode->SelectedTab == EMPTY_CFG_NODE_VALUE &&
+                                    OriginPanelNode->Tabs.Head
+                                ) {
+                                    AppCmd(
+                                        APP_COMMAND_KIND_FOCUS_TAB,
+                                        __Registers.Tab = OriginPanelNode->Tabs.Head->V->ID
+                                    );
+                                }
+
+                                if (
+                                    OriginPanel != SplitPanel &&
+                                    !OriginPanelNode->Tabs.Count
+                                ) {
+                                    AppCmd(
+                                        APP_COMMAND_KIND_CLOSE_PANEL,
+                                        __Registers.Panel = OriginPanel->ID
+                                    );
+                                }
                             }
                         }
                     } break;
@@ -3667,6 +4453,184 @@ AppFrame(void)
                                 APP_COMMAND_KIND_FOCUS_PANEL,
                                 __Registers.Panel = DestinationPanel->Config->ID
                             );
+                        }
+                    } break;
+
+                    case APP_COMMAND_KIND_CLOSE_PANEL: {
+                        ConfigNode* Window = ConfigNodeFromID(Registers()->Window);
+                        ConfigPanelTree PanelTree = ConfigPanelTreeFromConfig(
+                            Scratch.MemPool,
+                            Window
+                        );
+                        ConfigPanelNode* Panel = ConfigPanelNodeFromConfigTree(
+                            PanelTree.Root,
+                            ConfigNodeFromID(Registers()->Panel)
+                        );
+                        ConfigPanelNode* Parent = Panel->Parent;
+
+                        if (Parent != EMPTY_CFG_PANEL_NODE_VALUE) {
+                            ConfigPanelNode* NewFocused = EMPTY_CFG_PANEL_NODE_VALUE;
+
+                            if (Parent->ChildCount == 2) {
+                                ConfigPanelNode* KeepChild = (Panel == Parent->Head)
+                                    ? Parent->Tail
+                                    : Parent->Head;
+                                ConfigPanelNode* Grandparent = Parent->Parent;
+                                ConfigPanelNode* ParentPrev = Parent->Prev;
+                                f32 PercentOfParent = Parent->PercentOfParent;
+
+                                ConfigNodeUnhook(
+                                    APP_STATE->Config,
+                                    Parent->Config,
+                                    KeepChild->Config
+                                );
+                                ConfigNodeUnhook(
+                                    APP_STATE->Config,
+                                    (Grandparent != EMPTY_CFG_PANEL_NODE_VALUE)
+                                        ? Grandparent->Config
+                                        : Window,
+                                    Parent->Config
+                                );
+                                ConfigNodeRelease(
+                                    APP_STATE->Config,
+                                    Parent->Config
+                                );
+
+                                if (Grandparent == EMPTY_CFG_PANEL_NODE_VALUE) {
+                                    if (KeepChild->SplitAxis == AXIS_2D_X) {
+                                        ConfigNodeChildFromStrOrAlloc(
+                                            APP_STATE->Config,
+                                            Window,
+                                            "split_x"_s8
+                                        );
+                                    } else {
+                                        ConfigNodeRelease(
+                                            APP_STATE->Config,
+                                            ConfigNodeChildFromStr(
+                                                Window,
+                                                "split_x"_s8
+                                            )
+                                        );
+                                    }
+
+                                    ConfigNodeEquipStr(
+                                        APP_STATE->Config,
+                                        KeepChild->Config,
+                                        "panels"_s8
+                                    );
+                                    ConfigNodeInsertChild(
+                                        APP_STATE->Config,
+                                        Window,
+                                        Window->Tail,
+                                        KeepChild->Config
+                                    );
+                                } else {
+                                    ConfigNodeInsertChild(
+                                        APP_STATE->Config,
+                                        Grandparent->Config,
+                                        ParentPrev->Config,
+                                        KeepChild->Config
+                                    );
+                                    ConfigNodeEquipStr(
+                                        APP_STATE->Config,
+                                        KeepChild->Config,
+                                        "%f",
+                                        PercentOfParent
+                                    );
+                                }
+
+                                if (
+                                    Grandparent != EMPTY_CFG_PANEL_NODE_VALUE &&
+                                    Grandparent->SplitAxis == KeepChild->SplitAxis &&
+                                    KeepChild->Head != EMPTY_CFG_PANEL_NODE_VALUE
+                                ) {
+                                    ConfigNodeUnhook(
+                                        APP_STATE->Config,
+                                        Grandparent->Config,
+                                        KeepChild->Config
+                                    );
+
+                                    ConfigNode* Prev = ParentPrev->Config;
+
+                                    for (
+                                        ConfigPanelNode* Child = KeepChild->Head;
+                                        Child != EMPTY_CFG_PANEL_NODE_VALUE;
+                                        Child = Child->Next
+                                    ) {
+                                        ConfigNodeUnhook(
+                                            APP_STATE->Config,
+                                            KeepChild->Config,
+                                            Child->Config
+                                        );
+                                        ConfigNodeInsertChild(
+                                            APP_STATE->Config,
+                                            Grandparent->Config,
+                                            Prev,
+                                            Child->Config
+                                        );
+                                        ConfigNodeEquipStr(
+                                            APP_STATE->Config,
+                                            Child->Config,
+                                            "%f",
+                                            Child->PercentOfParent * PercentOfParent
+                                        );
+                                        Prev = Child->Config;
+                                    }
+
+                                    ConfigNodeRelease(
+                                        APP_STATE->Config,
+                                        KeepChild->Config
+                                    );
+                                }
+
+                                NewFocused = KeepChild;
+                            } else {
+                                f32 RemovedSizePercent = Panel->PercentOfParent;
+
+                                NewFocused = (Panel->Prev != EMPTY_CFG_PANEL_NODE_VALUE)
+                                    ? Panel->Prev
+                                    : Panel->Next;
+                                ConfigNodeUnhook(
+                                    APP_STATE->Config,
+                                    Parent->Config,
+                                    Panel->Config
+                                );
+                                ConfigNodeRelease(
+                                    APP_STATE->Config,
+                                    Panel->Config
+                                );
+
+                                for (
+                                    ConfigPanelNode* Child = Parent->Head;
+                                    Child != EMPTY_CFG_PANEL_NODE_VALUE;
+                                    Child = Child->Next
+                                ) {
+                                    if (Child == Panel)
+                                        continue;
+
+                                    ConfigNodeEquipStr(
+                                        APP_STATE->Config,
+                                        Child->Config,
+                                        "%f",
+                                        Child->PercentOfParent / (1.0f - RemovedSizePercent)
+                                    );
+                                }
+                            }
+
+                            if (PanelTree.Focused == Panel) {
+                                for (
+                                    ConfigPanelNode* Child = NewFocused->Head;
+                                    Child != EMPTY_CFG_PANEL_NODE_VALUE;
+                                    Child = Child->Head
+                                ) {
+                                    NewFocused = Child;
+                                }
+
+                                AppCmd(
+                                    APP_COMMAND_KIND_FOCUS_PANEL,
+                                    __Registers.Panel = NewFocused->Config->ID
+                                );
+                            }
                         }
                     } break;
 
@@ -3936,6 +4900,80 @@ AppFrame(void)
                         }
                     } break;
 
+                    case APP_COMMAND_KIND_DUPLICATE_TAB: {
+                        ConfigNode* Source = ConfigNodeFromID(Registers()->Tab);
+
+                        if (Source != EMPTY_CFG_NODE_VALUE) {
+                            ConfigNode* Destination = ConfigNodeCpy(
+                                APP_STATE->Config,
+                                Source
+                            );
+
+                            ConfigNodeInsertChild(
+                                APP_STATE->Config,
+                                Source->Parent,
+                                Source,
+                                Destination
+                            );
+                            AppCmd(
+                                APP_COMMAND_KIND_FOCUS_TAB,
+                                __Registers.Tab = Destination->ID
+                            );
+                        }
+                    } break;
+
+                    case APP_COMMAND_KIND_MOVE_VIEW: {
+                        ConfigNode* View = ConfigNodeFromID(Registers()->View);
+                        ConfigNode* PrevTab = ConfigNodeFromID(Registers()->PrevTab);
+                        ConfigNode* SrcPanel = View->Parent;
+                        ConfigNode* DstPanel = ConfigNodeFromID(Registers()->DstPanel);
+
+                        if (
+                            View != EMPTY_CFG_NODE_VALUE &&
+                            DstPanel != EMPTY_CFG_NODE_VALUE &&
+                            PrevTab != View
+                        ) {
+                            ConfigNodeUnhook(APP_STATE->Config, SrcPanel, View);
+                            ConfigNodeInsertChild(
+                                APP_STATE->Config,
+                                DstPanel,
+                                PrevTab,
+                                View
+                            );
+                            AppCmd(
+                                APP_COMMAND_KIND_FOCUS_TAB,
+                                __Registers.Tab = View->ID
+                            );
+                            AppCmd(
+                                APP_COMMAND_KIND_FOCUS_PANEL,
+                                __Registers.Panel = DstPanel->ID
+                            );
+
+                            if (SrcPanel != DstPanel) {
+                                ConfigPanelTree SrcPanelTree = ConfigPanelTreeFromConfig(
+                                    Scratch.MemPool,
+                                    SrcPanel
+                                );
+                                ConfigPanelNode* SrcPanelNode = ConfigPanelNodeFromConfigTree(
+                                    SrcPanelTree.Root,
+                                    SrcPanel
+                                );
+
+                                if (!SrcPanelNode->Tabs.Count) {
+                                    AppCmd(
+                                        APP_COMMAND_KIND_CLOSE_PANEL,
+                                        __Registers.Panel = SrcPanel->ID
+                                    );
+                                } else if (SrcPanelNode->SelectedTab == EMPTY_CFG_NODE_VALUE) {
+                                    AppCmd(
+                                        APP_COMMAND_KIND_FOCUS_TAB,
+                                        __Registers.Tab = SrcPanelNode->Tabs.Head->V->ID
+                                    );
+                                }
+                            }
+                        }
+                    } break;
+
                     case APP_COMMAND_KIND_CLOSE_TAB: {
                         ConfigNode* Tab = ConfigNodeFromID(Registers()->Tab);
                         ConfigPanelTree PanelTree = ConfigPanelTreeFromConfig(
@@ -3976,6 +5014,134 @@ AppFrame(void)
 
                         if (Tab != EMPTY_CFG_NODE_VALUE)
                             ConfigNodeRelease(APP_STATE->Config, Tab);
+                    } break;
+
+                    case APP_COMMAND_KIND_SET_TAB_VIEW: {
+                        ConfigNode* Tab = ConfigNodeFromID(Registers()->Tab);
+
+                        if (
+                            Tab != EMPTY_CFG_NODE_VALUE &&
+                            Registers()->String.Size &&
+                            !StrMatch(Tab->String, Registers()->String, 0)
+                        ) {
+                            AppViewState* VS = AppViewStateFromConfig(Tab);
+
+                            ConfigNodeEquipStr(
+                                APP_STATE->Config,
+                                Tab,
+                                Registers()->String
+                            );
+
+                            for (
+                                AppArenaExt* Ext = VS->HeadArenaExt;
+                                Ext;
+                                Ext = Ext->Next
+                            ) {
+                                ArenaRelease(Ext->MemPool);
+                            }
+
+                            ArenaPopTo(VS->MemPool, VS->MemPoolResetPosition);
+                            VS->UserData = NULL;
+                            VS->HeadArenaExt = NULL;
+                            VS->TailArenaExt = NULL;
+                            VS->ScrollPosition = {};
+                            VS->QueryIsOpen = FALSE;
+                        }
+                    } break;
+
+                    case APP_COMMAND_KIND_SET_TAB_FILE: {
+                        ConfigNode* Tab = ConfigNodeFromID(Registers()->Tab);
+                        ConfigNode* TabFile = ConfigNodeChildFromStr(Tab, "file"_s8);
+                        Str8 Path = StrTrimLastSlash(
+                            PathAbsoluteDstFromRelativeDstSrc(
+                                Scratch.MemPool,
+                                Registers()->FilePath,
+                                GetCurrentPath(Scratch.MemPool)
+                            )
+                        );
+                        FileProperties Props = SystemGetFileProperties(Path);
+                        b32 IsFolder = !!(Props.Kind & SYS_FILE_IS_DIR);
+
+                        if (!Props.Created || IsFolder) {
+                            Str8 Error = IsFolder
+                                ? ArenaPushStrFmt(
+                                    Scratch.MemPool,
+                                    "FUME cannot show \"%S\" in a tab. It is a folder.",
+                                    PRINT_STR(Path)
+                                )
+                                : ArenaPushStrFmt(
+                                    Scratch.MemPool,
+                                    "FUME cannot open \"%S\". The file does not exist.",
+                                    PRINT_STR(Path)
+                                );
+
+                            APP_STATE->ErrorStrSize = MIN(
+                                sizeof(APP_STATE->ErrorBuffer),
+                                Error.Size
+                            );
+                            MemCpy(
+                                APP_STATE->ErrorBuffer,
+                                Error.Str,
+                                APP_STATE->ErrorStrSize
+                            );
+                            APP_STATE->ErrorFrameIndex = APP_STATE->FrameIndex;
+                        } else if (TabFile == EMPTY_CFG_NODE_VALUE) {
+                            AppCmd(
+                                APP_COMMAND_KIND_OPEN,
+                                __Registers.FilePath = Path
+                            );
+                        } else if (!PathMatchNormalised(TabFile->Head->String, Path)) {
+                            ConfigNode* Session = ConfigNodeChildFromStr(
+                                ConfigNodeRoot(),
+                                "session"_s8
+                            );
+                            AppViewState* VS = AppViewStateFromConfig(Tab);
+                            b32 IsRecorded = FALSE;
+
+                            ConfigNodeNewReplace(APP_STATE->Config, TabFile, Path);
+
+                            for (
+                                ConfigNode* Child = Session->Head;
+                                Child != EMPTY_CFG_NODE_VALUE;
+                                Child = Child->Next
+                            ) {
+                                if (
+                                    StrMatch(Child->String, "file"_s8, 0) &&
+                                    PathMatchNormalised(Child->Head->String, Path)
+                                ) {
+                                    IsRecorded = TRUE;
+                                    break;
+                                }
+                            }
+
+                            if (!IsRecorded) {
+                                ConfigNode* File = ConfigNodeNew(
+                                    APP_STATE->Config,
+                                    Session,
+                                    "file"_s8
+                                );
+
+                                ConfigNodeNew(APP_STATE->Config, File, Path);
+                            }
+
+                            for (
+                                AppArenaExt* Ext = VS->HeadArenaExt;
+                                Ext;
+                                Ext = Ext->Next
+                            ) {
+                                ArenaRelease(Ext->MemPool);
+                            }
+
+                            ArenaPopTo(VS->MemPool, VS->MemPoolResetPosition);
+                            VS->UserData = NULL;
+                            VS->HeadArenaExt = NULL;
+                            VS->TailArenaExt = NULL;
+                            VS->ScrollPosition = {};
+                            AppCmd(
+                                APP_COMMAND_KIND_SET_CURRENT_PATH,
+                                __Registers.FilePath = StrChopLastSlash(Path)
+                            );
+                        }
                     } break;
 
                     case APP_COMMAND_KIND_SET_CURRENT_PATH: {
@@ -4511,7 +5677,8 @@ AppFrame(void)
                             APP_STATE->QueryMark = APP_STATE->QueryCursor;
                             APP_STATE->QueryScroll = {};
                             APP_STATE->QueryListCursor = {};
-                            APP_STATE->QueryListMark = {};
+                            APP_STATE->QueryListCursor.Y = (Info->Query.Slot != APP_REGISTERS_SLOT_FILE_PATH);
+                            APP_STATE->QueryListMark = APP_STATE->QueryListCursor;
                         } else if (
                             ConfigNodeFromID(
                                 Registers()->View
@@ -4567,10 +5734,14 @@ AppFrame(void)
                                 VS->QueryMark = VS->QueryCursor;
                             }
 
-                            if (!StrMatch(CurrentQueryCommandName, CommandName, 0))
+                            if (
+                                !StrMatch(CurrentQueryCommandName, CommandName, 0) ||
+                                VS->ContentsAreFocused
+                            ) {
                                 VS->QueryIsOpen = TRUE;
-                            else
+                            } else {
                                 VS->QueryIsOpen ^= TRUE;
+                            }
 
                             VS->ContentsAreFocused = FALSE;
                         }
@@ -4673,6 +5844,9 @@ AppFrame(void)
     AppWindowFrame();
     MemSet(&APP_STATE->UIEvents, 0, sizeof(APP_STATE->UIEvents));
 
+    if (APP_STATE->DragDropState == APP_DRAG_DROP_STATE_DROPPING)
+        APP_STATE->DragDropState = APP_DRAG_DROP_STATE_NULL;
+
     AppRegisters* WindowRegs = AppPopRegisters();
 
     MemCpy(Registers(), WindowRegs, sizeof(*WindowRegs));
@@ -4742,7 +5916,7 @@ AppWindowFrame(void)
             ThemeConfig != EMPTY_CFG_NODE_VALUE && 
             ThemeConfig->Head != EMPTY_CFG_NODE_VALUE
         ) ? ThemeConfig->Head->String
-          : APP_THEME_PRESET_DISPLAY_STR_TABLE[APP_THEME_PRESET_FAR_MANAGER];
+          : APP_THEME_PRESET_DISPLAY_STR_TABLE[APP_THEME_PRESET_AYU_DARK];
         MDNode* ThemeTree = AppThemeTreeFromName(
             Scratch.MemPool, 
             Acc, 
@@ -4859,6 +6033,33 @@ AppWindowFrame(void)
         WindowRect.X1,
         BottomBarRect.Y0
     );
+
+    if (
+        AppDragIsActive() &&
+        APP_STATE->DragDropRegistersSlot == APP_REGISTERS_SLOT_VIEW
+    ) {
+        ConfigNode* DragTab = ConfigNodeFromID(
+            APP_STATE->DragDropRegisters->View
+        );
+
+        if (
+            DragTab == EMPTY_CFG_NODE_VALUE ||
+            UISlotPress(UI_EVENT_ACTION_SLOT_CANCEL)
+        ) {
+            AppDragKill();
+            UIKillAction();
+        } else {
+            UITooltip() {
+                FancyStrList Title = AppTitleFStrFromConfig(
+                    Scratch.MemPool,
+                    DragTab
+                );
+                UIBox* Box = UIBuildBoxFromKey(UI_BOX_KIND_DRAW_TEXT, {});
+
+                UIBoxEquipDisplayFancyStrs(Box, &Title);
+            }
+        }
+    }
 
     if (UIStringHoverActive()) {
         UITooltip() {
@@ -4999,10 +6200,12 @@ AppWindowFrame(void)
     UIKey ViewMenuKey = UIKeyFromStr({}, "_view_menu_key_"_s8);
     UIKey GoMenuKey = UIKeyFromStr({}, "_go_menu_key_"_s8);
     UIKey TabMenuKey = UIKeyFromStr({}, "_tab_menu_key_"_s8);
+    UIKey PanelMenuKey = UIKeyFromStr({}, "_panel_menu_key_"_s8);
     UIKey HelpMenuKey = UIKeyFromStr({}, "_help_menu_key_"_s8);
+    UIKey TabCtxMenuKey = UIKeyFromStr({}, "_tab_ctx_menu_key_"_s8);
 
     UIContextMenu(FileMenuKey) {
-        UIPreferredWidth(UI_PX(36.0f, 1.0f)) {
+        UIPreferredWidth(UI_PX(48.0f, 1.0f)) {
             UITag("floating"_s8) {
                 Str8 Commands[] = {
                     APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_OPEN].String,
@@ -5035,7 +6238,7 @@ AppWindowFrame(void)
     }
 
     UIContextMenu(ViewMenuKey) {
-        UIPreferredWidth(UI_PX(36.0f, 1.0f)) {
+        UIPreferredWidth(UI_PX(48.0f, 1.0f)) {
             UITag("floating"_s8) {
                 Str8 Commands[] = {
                     APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_OPEN_FILES].String,
@@ -5074,7 +6277,7 @@ AppWindowFrame(void)
     }
 
     UIContextMenu(GoMenuKey) {
-        UIPreferredWidth(UI_PX(36.0f, 1.0f)) {
+        UIPreferredWidth(UI_PX(48.0f, 1.0f)) {
             UITag("floating"_s8) {
                 Str8 Commands[] = {
                     APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_GOTO_OFFSET].String,
@@ -5117,10 +6320,12 @@ AppWindowFrame(void)
     }
 
     UIContextMenu(TabMenuKey) {
-        UIPreferredWidth(UI_PX(36.0f, 1.0f)) {
+        UIPreferredWidth(UI_PX(48.0f, 1.0f)) {
             UITag("floating"_s8) {
                 Str8 Commands[] = {
                     APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_OPEN_TAB].String,
+                    APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_DUPLICATE_TAB].String,
+                    APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_SET_TAB_FILE].String,
                     APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_CLOSE_TAB].String,
                     {},
                     APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_MOVE_TAB_LEFT].String,
@@ -5131,6 +6336,8 @@ AppWindowFrame(void)
                 };
                 u32 CodePoints[] = {
                     'o',
+                    'd',
+                    'f',
                     'c',
                     0,
                     'l',
@@ -5153,8 +6360,47 @@ AppWindowFrame(void)
         }
     }
 
+    UIContextMenu(PanelMenuKey) {
+        UIPreferredWidth(UI_PX(48.0f, 1.0f)) {
+            UITag("floating"_s8) {
+                Str8 Commands[] = {
+                    APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_NEW_PANEL_RIGHT].String,
+                    APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_NEW_PANEL_DOWN].String,
+                    APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_NEW_PANEL_LEFT].String,
+                    APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_NEW_PANEL_UP].String,
+                    {},
+                    APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_CLOSE_PANEL].String,
+                    {},
+                    APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_NEXT_PANEL].String,
+                    APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_PREV_PANEL].String
+                };
+                u32 CodePoints[] = {
+                    'r',
+                    'd',
+                    'l',
+                    'u',
+                    0,
+                    'c',
+                    0,
+                    'n',
+                    'p'
+                };
+
+                STATIC_ASSERT(
+                    ARRAY_COUNT(CodePoints) == ARRAY_COUNT(Commands),
+                    PanelMenuCommandsSizeCheck
+                );
+                AppCommandListMenuButtons(
+                    Commands,
+                    ARRAY_COUNT(Commands),
+                    CodePoints
+                );
+            }
+        }
+    }
+
     UIContextMenu(HelpMenuKey) {
-        UIPreferredWidth(UI_PX(36.0f, 1.0f)) {
+        UIPreferredWidth(UI_PX(48.0f, 1.0f)) {
             UITag("floating"_s8) {
                 Str8 Commands[] = {
                     APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_OPEN_PALETTE].String,
@@ -5176,6 +6422,134 @@ AppWindowFrame(void)
                     ARRAY_COUNT(Commands), 
                     CodePoints
                 );
+            }
+        }
+    }
+
+    UIContextMenu(TabCtxMenuKey) {
+        ConfigNode* MenuTab = ConfigNodeFromID(APP_STATE->TabCtxMenuTab);
+
+        if (MenuTab == EMPTY_CFG_NODE_VALUE) {
+            UIContextMenuClose();
+        } else {
+            UIPreferredWidth(UI_PX(48.0f, 1.0f)) {
+                UITag("floating"_s8) {
+                    AppRegistersScope(
+                        __Registers.Panel = MenuTab->Parent->ID,
+                        __Registers.Tab = MenuTab->ID,
+                        __Registers.View = MenuTab->ID
+                    ) {
+                        Str8 TabFilePath = AppViewFilePath();
+
+                        if (TabFilePath.Size) {
+                            UISetNextPreferredHeight(UI_SUM_OF_CHILDREN(1.0f));
+
+                            UIColumn() {
+                                for (
+                                    u64 Index = 0;
+                                    Index < ARRAY_COUNT(APP_TAB_FAST_PATH_VIEW_NAME_TABLE);
+                                    ++Index
+                                ) {
+                                    AppCommandKindInfo* ViewInfo = &APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_FIRST_TAB_FAST_PATH_CMD + Index];
+                                    Str8 ViewName = APP_TAB_FAST_PATH_VIEW_NAME_TABLE[Index];
+
+                                    if (!(ViewInfo->Flags & APP_COMMAND_KIND_FLAG_LIST_IN_FILE))
+                                        continue;
+
+                                    UISignal Sig = AppIconButton(
+                                        StrMatch(MenuTab->String, ViewName, 0)
+                                            ? APP_ICON_KIND_RADIO_FILLED
+                                            : APP_ICON_KIND_RADIO_HOLLOW,
+                                        NULL,
+                                        "%S###tab_view_%S",
+                                        PRINT_STR(ViewInfo->DisplayName),
+                                        PRINT_STR(ViewName)
+                                    );
+
+                                    if (UI_CLICKED(Sig)) {
+                                        AppCmd(
+                                            APP_COMMAND_KIND_SET_TAB_VIEW,
+                                            __Registers.String = ViewName
+                                        );
+                                        UIContextMenuClose();
+                                    }
+                                }
+
+                                UIDivider(UI_PX(1.0f, 1.0f));
+                                UISetNextFocusHot(UI_FOCUS_KIND_ON);
+                                UISetNextFocusActive(UI_FOCUS_KIND_ON);
+
+                                UINamedRow("###tab_file_row"_s8) {
+                                    UIKey FileEditKey = UIKeyFromStr(
+                                        UIHeadParent()->Key,
+                                        "###tab_file"_s8
+                                    );
+
+                                    if (UIIsKeyAutoFocusActive(FileEditKey))
+                                        APP_STATE->TextEditMode = TRUE;
+
+                                    UIPreferredWidth(UI_TEXT_DIM(2.0f, 1.0f)) {
+                                        UITag("weak"_s8) {
+                                            UILabel(APP_ICON_KIND_TEXT_TABLE[APP_ICON_KIND_FILE]);
+                                        }
+                                    }
+
+                                    UIPreferredWidth(UI_PERCENT(1.0f, 0.0f)) {
+                                        UITag("alt"_s8) {
+                                            UISignal EditSig = UILineEdit(
+                                                &APP_STATE->TabCtxMenuCursor,
+                                                &APP_STATE->TabCtxMenuMark,
+                                                APP_STATE->TabCtxMenuFileBuffer,
+                                                sizeof(APP_STATE->TabCtxMenuFileBuffer),
+                                                &APP_STATE->TabCtxMenuFileSize,
+                                                TabFilePath,
+                                                "###tab_file"_s8
+                                            );
+
+                                            if (UI_COMMITTED(EditSig)) {
+                                                AppCmd(
+                                                    APP_COMMAND_KIND_SET_TAB_FILE,
+                                                    __Registers.FilePath = Str(
+                                                        APP_STATE->TabCtxMenuFileBuffer,
+                                                        APP_STATE->TabCtxMenuFileSize
+                                                    )
+                                                );
+                                                UIContextMenuClose();
+                                            }
+                                        }
+                                    }
+                                }
+
+                                UIDivider(UI_PX(1.0f, 1.0f));
+                            }
+                        }
+
+                        Str8 Commands[] = {
+                            APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_DUPLICATE_TAB].String,
+                            APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_CLOSE_TAB].String,
+                            {},
+                            APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_MOVE_TAB_LEFT].String,
+                            APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_MOVE_TAB_RIGHT].String
+                        };
+                        u32 CodePoints[] = {
+                            0,
+                            0,
+                            0,
+                            0,
+                            0
+                        };
+
+                        STATIC_ASSERT(
+                            ARRAY_COUNT(CodePoints) == ARRAY_COUNT(Commands),
+                            TabCtxMenuCommandsSizeCheck
+                        );
+                        AppCommandListMenuButtons(
+                            Commands,
+                            ARRAY_COUNT(Commands),
+                            CodePoints
+                        );
+                    }
+                }
             }
         }
     }
@@ -5238,6 +6612,12 @@ AppWindowFrame(void)
                                         't',
                                         INPUT_KIND_T,
                                         TabMenuKey
+                                    },
+                                    {
+                                        Str8Lit("Panel"),
+                                        'p',
+                                        INPUT_KIND_P,
+                                        PanelMenuKey
                                     },
                                     {
                                         Str8Lit("Help"),
@@ -5370,14 +6750,159 @@ AppWindowFrame(void)
 
                 UISpacer(UI_PERCENT(1.0f, 0.0f));
 
-                UITag("weak"_s8) {
-                    UILabel("F1 Commands   Ctrl+O Open   Ctrl+Q Exit"_s8);
+                AppCommandKind BarCommands[] = {
+                    APP_COMMAND_KIND_OPEN_PALETTE,
+                    APP_COMMAND_KIND_OPEN,
+                    APP_COMMAND_KIND_EXIT
+                };
+
+                for (u64 Index = 0; Index < ARRAY_COUNT(BarCommands); ++Index) {
+                    AppCommandKindInfo* BarInfo = &APP_COMMAND_KIND_INFO_TABLE[BarCommands[Index]];
+                    ConfigInputMapNodePtrList BarKeys = ConfigInputMapNodePtrListFromName(
+                        Scratch.MemPool,
+                        APP_STATE->KeyMap,
+                        BarInfo->String
+                    );
+                    UISignal Sig = UIButton(
+                        "%S###bar_cmd_%S",
+                        PRINT_STR(BarInfo->DisplayName),
+                        PRINT_STR(BarInfo->String)
+                    );
+
+                    if (UI_CLICKED(Sig)) {
+                        AppCmd(
+                            APP_COMMAND_KIND_RUN_COMMAND,
+                            __Registers.CommandName = BarInfo->String
+                        );
+                    }
+
+                    AppCommandBindingButtons(
+                        BarInfo->String,
+                        ""_s8,
+                        1,
+                        BarKeys.Head
+                            ? 0
+                            : APP_COMMAND_BINDING_BTN_FLAG_ADD_NEW
+                    );
+                    UISpacer(UI_PX(1.0f, 1.0f));
                 }
             }
         }
     }
 
     if (ContentRect.X1 > ContentRect.X0 && ContentRect.Y1 > ContentRect.Y0) {
+        for (
+            ConfigPanelNode* Panel = PanelTree.Root;
+            Panel != EMPTY_CFG_PANEL_NODE_VALUE;
+            Panel = ConfigPanelNodeRecDepthFirstPre(PanelTree.Root, Panel).Next
+        ) {
+            if (
+                Panel->Head == EMPTY_CFG_PANEL_NODE_VALUE ||
+                Panel->SplitAxis != AXIS_2D_X
+            ) {
+                continue;
+            }
+
+            r2f32 ParentRect = ConfigTargetRectFromPanelNode(
+                ContentRect,
+                PanelTree.Root,
+                Panel
+            );
+            f32 TotalSize = Length(ParentRect).X;
+
+            for (
+                ConfigPanelNode* MinChild = Panel->Head;
+                MinChild->Next != EMPTY_CFG_PANEL_NODE_VALUE;
+                MinChild = MinChild->Next
+            ) {
+                ConfigPanelNode* MaxChild = MinChild->Next;
+                r2f32 MinChildRect = ConfigTargetRectFromPanelNodeChild(
+                    ParentRect,
+                    Panel,
+                    MinChild
+                );
+                r2f32 BoundaryRect = Rng(
+                    MinChildRect.X1 - 1.0f,
+                    ParentRect.Y0,
+                    MinChildRect.X1,
+                    ParentRect.Y1
+                );
+                UIBox* BoundaryBox = EMPTY_UI_BOX_VALUE;
+
+                UIRect(BoundaryRect) {
+                    UITag("menu_bar"_s8) {
+                        UISetNextHoverCursor(CURSOR_KIND_LEFT_RIGHT);
+                        BoundaryBox = UIBuildBoxFromStrFmt(
+                            (
+                                UI_BOX_KIND_MOUSE_CLICKABLE |
+                                UI_BOX_KIND_DRAW_BACKGROUND |
+                                UI_BOX_KIND_DRAW_HOT_EFFECTS |
+                                UI_BOX_KIND_DRAW_ACTIVE_EFFECTS
+                            ),
+                            "###panel_boundary_%p_%p",
+                            MinChild->Config,
+                            MaxChild->Config
+                        );
+                    }
+                }
+
+                UISignal Sig = UISignalFromBox(BoundaryBox);
+
+                if (UI_DOUBLE_CLICKED(Sig)) {
+                    f32 HalfPercent = 0.5f * (MinChild->PercentOfParent + MaxChild->PercentOfParent);
+
+                    UIKillAction();
+                    MinChild->PercentOfParent = HalfPercent;
+                    MaxChild->PercentOfParent = HalfPercent;
+                    ConfigNodeEquipStr(
+                        APP_STATE->Config,
+                        MinChild->Config,
+                        "%f",
+                        HalfPercent
+                    );
+                    ConfigNodeEquipStr(
+                        APP_STATE->Config,
+                        MaxChild->Config,
+                        "%f",
+                        HalfPercent
+                    );
+                } else if (UI_PRESSED(Sig)) {
+                    v2f32 Percents = Vec(
+                        MinChild->PercentOfParent,
+                        MaxChild->PercentOfParent
+                    );
+
+                    UIStoreDragStruct(&Percents);
+                } else if (UI_DRAGGING(Sig)) {
+                    v2f32 Percents = *UIGetDragStruct(v2f32);
+                    f32 BothSize = (Percents.X + Percents.Y) * TotalSize;
+
+                    if (BothSize >= 20.0f) {
+                        f32 MinSize = CLAMP(
+                            10.0f,
+                            Percents.X * TotalSize + UIDragDelta().X,
+                            BothSize - 10.0f
+                        );
+
+                        MinChild->PercentOfParent = MinSize / TotalSize;
+                        MaxChild->PercentOfParent = (BothSize - MinSize) / TotalSize;
+                        ConfigNodeEquipStr(
+                            APP_STATE->Config,
+                            MinChild->Config,
+                            "%f",
+                            MinChild->PercentOfParent
+                        );
+                        ConfigNodeEquipStr(
+                            APP_STATE->Config,
+                            MaxChild->Config,
+                            "%f",
+                            MaxChild->PercentOfParent
+                        );
+                    }
+                }
+            }
+        }
+
         for (
             ConfigPanelNode* Panel = PanelTree.Root;
             Panel != EMPTY_CFG_PANEL_NODE_VALUE;
@@ -5398,6 +6923,10 @@ AppWindowFrame(void)
 
             UIFocus((PanelIsFocused) ? UI_FOCUS_KIND_NULL : UI_FOCUS_KIND_OFF) {
                 r2f32 PanelRect = ConfigTargetRectFromPanelNode(ContentRect, PanelTree.Root, Panel);
+
+                if (PanelRect.X1 < ContentRect.X1)
+                    PanelRect.X1 -= 1.0f;
+
                 r2f32 TabBarRect = Rng(
                     PanelRect.X0,
                     PanelRect.Y0,
@@ -5422,6 +6951,143 @@ AppWindowFrame(void)
                     PanelContentRect.X1 > PanelContentRect.X0 &&
                     PanelContentRect.Y1 > PanelContentRect.Y0
                 );
+
+                if (
+                    BuildPanel &&
+                    AppDragIsActive() &&
+                    APP_STATE->DragDropRegistersSlot == APP_REGISTERS_SLOT_VIEW
+                ) {
+                    ConfigNode* DragTab = ConfigNodeFromID(
+                        APP_STATE->DragDropRegisters->View
+                    );
+                    b32 DragIsFromThisPanel = (DragTab->Parent == Panel->Config);
+                    f32 SideX = FloorF32(Length(PanelContentRect).X / 4.0f);
+                    f32 SideY = FloorF32(Length(PanelContentRect).Y / 4.0f);
+
+                    struct {
+                        Direction2D Direction;
+                        r2f32       Rect;
+                    } Sites[] = {
+                        {
+                            DIR_2D_LEFT,
+                            Rng(
+                                PanelContentRect.X0,
+                                PanelContentRect.Y0,
+                                PanelContentRect.X0 + SideX,
+                                PanelContentRect.Y1
+                            )
+                        },
+                        {
+                            DIR_2D_RIGHT,
+                            Rng(
+                                PanelContentRect.X1 - SideX,
+                                PanelContentRect.Y0,
+                                PanelContentRect.X1,
+                                PanelContentRect.Y1
+                            )
+                        },
+                        {
+                            DIR_2D_UP,
+                            Rng(
+                                PanelContentRect.X0 + SideX,
+                                PanelContentRect.Y0,
+                                PanelContentRect.X1 - SideX,
+                                PanelContentRect.Y0 + SideY
+                            )
+                        },
+                        {
+                            DIR_2D_DOWN,
+                            Rng(
+                                PanelContentRect.X0 + SideX,
+                                PanelContentRect.Y1 - SideY,
+                                PanelContentRect.X1 - SideX,
+                                PanelContentRect.Y1
+                            )
+                        },
+                        {
+                            DIR_2D_INVALID,
+                            Rng(
+                                PanelContentRect.X0 + SideX,
+                                PanelContentRect.Y0 + SideY,
+                                PanelContentRect.X1 - SideX,
+                                PanelContentRect.Y1 - SideY
+                            )
+                        }
+                    };
+
+                    for (u64 Index = 0; Index < ARRAY_COUNT(Sites); ++Index) {
+                        Direction2D Direction = Sites[Index].Direction;
+
+                        if (
+                            DragIsFromThisPanel &&
+                            (
+                                Direction == DIR_2D_INVALID ||
+                                Panel->Tabs.Count < 2
+                            )
+                        ) {
+                            continue;
+                        }
+
+                        UIBox* SiteBox = EMPTY_UI_BOX_VALUE;
+
+                        UIRect(Sites[Index].Rect) {
+                            SiteBox = UIBuildBoxFromStrFmt(
+                                UI_BOX_KIND_DROP_SITE,
+                                "###drop_site_%d_%p",
+                                (i32) Direction,
+                                Panel->Config
+                            );
+                        }
+
+                        UISignalFromBox(SiteBox);
+
+                        if (SiteBox->Key != UIDropHotKey())
+                            continue;
+
+                        r2f32 FutureRect = PanelRect;
+
+                        if (Direction != DIR_2D_INVALID) {
+                            Axis2D SplitAxis = Axis2DFromDir2D(Direction);
+                            SideKind SplitSide = SideFromDir2D(Direction);
+
+                            FutureRect.V[FLIP_SIDE(SplitSide)].V[SplitAxis] = FloorF32(
+                                Centre(PanelRect).V[SplitAxis]
+                            );
+                        }
+
+                        UIRect(FutureRect) {
+                            UITag("drop_site"_s8) {
+                                UIBuildBoxFromKey(
+                                    UI_BOX_KIND_DRAW_BACKGROUND,
+                                    EMPTY_UI_KEY_VALUE
+                                );
+                            }
+                        }
+
+                        if (AppDragDrop()) {
+                            if (Direction != DIR_2D_INVALID) {
+                                AppCmd(
+                                    APP_COMMAND_KIND_SPLIT_PANEL,
+                                    __Registers.DstPanel = Panel->Config->ID,
+                                    __Registers.Panel = APP_STATE->DragDropRegisters->Panel,
+                                    __Registers.Tab = APP_STATE->DragDropRegisters->View,
+                                    __Registers.View = APP_STATE->DragDropRegisters->View,
+                                    __Registers.Direction = Direction
+                                );
+                            } else {
+                                AppCmd(
+                                    APP_COMMAND_KIND_MOVE_VIEW,
+                                    __Registers.DstPanel = Panel->Config->ID,
+                                    __Registers.Panel = APP_STATE->DragDropRegisters->Panel,
+                                    __Registers.Tab = APP_STATE->DragDropRegisters->View,
+                                    __Registers.View = APP_STATE->DragDropRegisters->View,
+                                    __Registers.PrevTab = ConfigTailNode(&Panel->Tabs)->ID
+                                );
+                            }
+                        }
+                    }
+                }
+
                 UIBox* PanelBox = EMPTY_UI_BOX_VALUE;
 
                 if (BuildPanel) {
@@ -5496,15 +7162,41 @@ AppWindowFrame(void)
                                     if (SelectedTab != EMPTY_CFG_NODE_VALUE) {
                                         AppViewUI(PanelContentRect);
                                     } else {
-                                        UIPadding(UI_PERCENT(1.0f, 0.0f)) {
-                                            UITextAlignment(UI_TEXT_ALIGN_CENTRE) {
-                                                UITag("weak"_s8) {
-                                                    UILabel(
-                                                        "This panel has no tabs. Press Ctrl+T to open a tab."_s8
+                                        Str8 Commands[] = {
+                                            APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_OPEN].String,
+                                            APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_OPEN_FILES].String,
+                                            APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_OPEN_TAB].String,
+                                            APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_CLOSE_PANEL].String
+                                        };
+                                        u64 CommandsCount = ARRAY_COUNT(Commands);
+
+                                        if (Panel->Parent == EMPTY_CFG_PANEL_NODE_VALUE)
+                                            --CommandsCount;
+
+                                        UISpacer(UI_PERCENT(1.0f, 0.0f));
+
+                                        for (u64 Index = 0; Index < CommandsCount; ++Index) {
+                                            UIRow() {
+                                                UISpacer(UI_PERCENT(1.0f, 0.0f));
+
+                                                UIPreferredWidth(UI_PX(40.0f, 1.0f)) {
+                                                    UISignal Sig = AppCommandSpecButton(
+                                                        Commands[Index]
                                                     );
+
+                                                    if (UI_CLICKED(Sig)) {
+                                                        AppCmd(
+                                                            APP_COMMAND_KIND_RUN_COMMAND,
+                                                            __Registers.CommandName = Commands[Index]
+                                                        );
+                                                    }
                                                 }
+
+                                                UISpacer(UI_PERCENT(1.0f, 0.0f));
                                             }
                                         }
+
+                                        UISpacer(UI_PERCENT(1.0f, 0.0f));
                                     }
                                 }
 
@@ -5535,11 +7227,28 @@ AppWindowFrame(void)
                 if (BuildPanel) {
                     UISignal PanelSig = UISignalFromBox(PanelBox);
 
-                    if (UI_PRESSED(PanelSig))
+                    if (UI_PRESSED(PanelSig)) {
                         AppCmd(
                             APP_COMMAND_KIND_FOCUS_PANEL, 
                             __Registers.Panel = Panel->Config->ID
                         );
+                    }
+                }
+
+                ConfigPanelNode* ResizeMaxChild = EMPTY_CFG_PANEL_NODE_VALUE;
+
+                for (
+                    ConfigPanelNode* P = Panel;
+                    Panel->TabSide == SIDE_MIN && P->Parent != EMPTY_CFG_PANEL_NODE_VALUE;
+                    P = P->Parent
+                ) {
+                    if (
+                        P->Parent->SplitAxis == AXIS_2D_Y &&
+                        P->Prev != EMPTY_CFG_PANEL_NODE_VALUE
+                    ) {
+                        ResizeMaxChild = P;
+                        break;
+                    }
                 }
 
                 UIBox* TabBarBox = EMPTY_UI_BOX_VALUE;
@@ -5548,6 +7257,10 @@ AppWindowFrame(void)
                     UITag("tab"_s8) {
                         UITag("inactive"_s8) {
                             UIRect(TabBarRect) {
+
+                                if (ResizeMaxChild != EMPTY_CFG_PANEL_NODE_VALUE)
+                                    UISetNextHoverCursor(CURSOR_KIND_UP_DOWN);
+
                                 UISetNextChildLayoutAxis(AXIS_2D_X);
                                 TabBarBox = UIBuildBoxFromStrFmt(
                                     (
@@ -5566,10 +7279,84 @@ AppWindowFrame(void)
                     }
                 }
 
+                ConfigNode* TabDropPrev = EMPTY_CFG_NODE_VALUE;
+                b32 TabDropIsActive = FALSE;
+
+                if (
+                    BuildPanel &&
+                    AppDragIsActive() &&
+                    APP_STATE->DragDropRegistersSlot == APP_REGISTERS_SLOT_VIEW
+                ) {
+                    ConfigNode* DragTab = ConfigNodeFromID(
+                        APP_STATE->DragDropRegisters->View
+                    );
+                    UIBox* TabDropSiteBox = EMPTY_UI_BOX_VALUE;
+
+                    UIRect(TabBarRect) {
+                        TabDropSiteBox = UIBuildBoxFromStrFmt(
+                            UI_BOX_KIND_DROP_SITE,
+                            "###tab_drop_site_%p",
+                            Panel->Config
+                        );
+                    }
+
+                    UISignalFromBox(TabDropSiteBox);
+                    TabDropIsActive = (TabDropSiteBox->Key == UIDropHotKey());
+
+                    for (
+                        ConfigNodePtrNode* N = Panel->Tabs.Head;
+                        N;
+                        N = N->Next
+                    ) {
+                        UIBox* LastTabBox = UIBoxFromKey(
+                            UIKeyFromStrFmt(TabBarBox->Key, "tab_%p", N->V)
+                        );
+
+                        if (
+                            !IsUIBoxEmpty(LastTabBox) &&
+                            Centre(LastTabBox->Rect).X < UIMouse().X
+                        ) {
+                            TabDropPrev = N->V;
+                        }
+                    }
+
+                    for (
+                        ConfigNodePtrNode* N = Panel->Tabs.Head;
+                        N;
+                        N = N->Next
+                    ) {
+                        if (
+                            N->V == DragTab &&
+                            (
+                                TabDropPrev == DragTab ||
+                                TabDropPrev == (
+                                    N->Prev 
+                                        ? N->Prev->V 
+                                        : EMPTY_CFG_NODE_VALUE
+                                )
+                            )
+                        ) {
+                            TabDropIsActive = FALSE;
+                        }
+                    }
+                }
+
                 if (BuildPanel) {
                     UIFocus(UI_FOCUS_KIND_OFF) {
                         UIParent(TabBarBox) {
                             UITag("tab"_s8) {
+                                if (
+                                    TabDropIsActive &&
+                                    TabDropPrev == EMPTY_CFG_NODE_VALUE
+                                ) {
+                                    UISetNextPreferredWidth(UI_PX(1.0f, 1.0f));
+                                    UISetNextBackgroundColour(UIColourFromName("hover"_s8));
+                                    UIBuildBoxFromKey(
+                                        UI_BOX_KIND_DRAW_BACKGROUND,
+                                        EMPTY_UI_KEY_VALUE
+                                    );
+                                }
+
                                 for (
                                     ConfigNodePtrNode* N = Panel->Tabs.Head;
                                     N;
@@ -5587,7 +7374,9 @@ AppWindowFrame(void)
                                         UITag(
                                             (!TabIsSelected) 
                                                 ? "inactive"_s8 
-                                                : ""_s8
+                                                : (PanelTree.Focused != Panel)
+                                                    ? "unfocused"_s8
+                                                    : ""_s8
                                         ) {
                                             FancyStrList String = AppTitleFStrFromConfig(
                                                 Scratch.MemPool, 
@@ -5650,9 +7439,47 @@ AppWindowFrame(void)
                                                 if (UI_PRESSED(Sig)) {
                                                     AppCmd(APP_COMMAND_KIND_FOCUS_TAB);
                                                     AppCmd(APP_COMMAND_KIND_FOCUS_PANEL);
+                                                } else if (
+                                                    UI_DRAGGING(Sig) &&
+                                                    !AppDragIsActive() &&
+                                                    Length(UIDragDelta()) > 1.0f
+                                                ) {
+                                                    AppDragBegin(APP_REGISTERS_SLOT_VIEW);
+                                                } else if (UI_RIGHT_CLICKED(Sig)) {
+                                                    Str8 TabFilePath = AppViewFilePath();
+
+                                                    APP_STATE->TabCtxMenuTab = Tab->ID;
+                                                    APP_STATE->TabCtxMenuFileSize = MIN(
+                                                        sizeof(APP_STATE->TabCtxMenuFileBuffer),
+                                                        TabFilePath.Size
+                                                    );
+                                                    MemCpy(
+                                                        APP_STATE->TabCtxMenuFileBuffer,
+                                                        TabFilePath.Str,
+                                                        APP_STATE->TabCtxMenuFileSize
+                                                    );
+                                                    APP_STATE->TabCtxMenuCursor = TxtPt(
+                                                        1,
+                                                        1 + APP_STATE->TabCtxMenuFileSize
+                                                    );
+                                                    APP_STATE->TabCtxMenuMark = APP_STATE->TabCtxMenuCursor;
+                                                    UIContextMenuOpen(
+                                                        TabCtxMenuKey,
+                                                        TabBox->Key,
+                                                        Vec(0.0f, 1.0f)
+                                                    );
                                                 } else if (UI_MIDDLE_CLICKED(Sig)) {
                                                     AppCmd(APP_COMMAND_KIND_CLOSE_TAB);
                                                 }
+                                            }
+
+                                            if (TabDropIsActive && Tab == TabDropPrev) {
+                                                UISetNextPreferredWidth(UI_PX(1.0f, 1.0f));
+                                                UISetNextBackgroundColour(UIColourFromName("hover"_s8));
+                                                UIBuildBoxFromKey(
+                                                    UI_BOX_KIND_DRAW_BACKGROUND,
+                                                    EMPTY_UI_KEY_VALUE
+                                                );
                                             }
                                         }
                                     }
@@ -5695,7 +7522,78 @@ AppWindowFrame(void)
                         }
                     }
 
-                    UISignalFromBox(TabBarBox);
+                    UISignal TabBarSig = UISignalFromBox(TabBarBox);
+
+                    if (ResizeMaxChild != EMPTY_CFG_PANEL_NODE_VALUE) {
+                        ConfigPanelNode* ResizeMinChild = ResizeMaxChild->Prev;
+                        f32 TotalSize = Length(
+                            ConfigTargetRectFromPanelNode(
+                                ContentRect,
+                                PanelTree.Root,
+                                ResizeMaxChild->Parent
+                            )
+                        ).Y;
+
+                        if (UI_DOUBLE_CLICKED(TabBarSig)) {
+                            f32 HalfPercent = 0.5f * (ResizeMinChild->PercentOfParent + ResizeMaxChild->PercentOfParent);
+
+                            UIKillAction();
+                            ConfigNodeEquipStr(
+                                APP_STATE->Config,
+                                ResizeMinChild->Config,
+                                "%f",
+                                HalfPercent
+                            );
+                            ConfigNodeEquipStr(
+                                APP_STATE->Config,
+                                ResizeMaxChild->Config,
+                                "%f",
+                                HalfPercent
+                            );
+                        } else if (UI_PRESSED(TabBarSig)) {
+                            v2f32 Percents = Vec(
+                                ResizeMinChild->PercentOfParent,
+                                ResizeMaxChild->PercentOfParent
+                            );
+
+                            UIStoreDragStruct(&Percents);
+                        } else if (UI_DRAGGING(TabBarSig)) {
+                            v2f32 Percents = *UIGetDragStruct(v2f32);
+                            f32 BothSize = (Percents.X + Percents.Y) * TotalSize;
+
+                            if (BothSize >= 6.0f) {
+                                f32 MinSize = CLAMP(
+                                    3.0f,
+                                    Percents.X * TotalSize + UIDragDelta().Y,
+                                    BothSize - 3.0f
+                                );
+
+                                ConfigNodeEquipStr(
+                                    APP_STATE->Config,
+                                    ResizeMinChild->Config,
+                                    "%f",
+                                    MinSize / TotalSize
+                                );
+                                ConfigNodeEquipStr(
+                                    APP_STATE->Config,
+                                    ResizeMaxChild->Config,
+                                    "%f",
+                                    (BothSize - MinSize) / TotalSize
+                                );
+                            }
+                        }
+                    }
+
+                    if (TabDropIsActive && AppDragDrop()) {
+                        AppCmd(
+                            APP_COMMAND_KIND_MOVE_VIEW,
+                            __Registers.DstPanel = Panel->Config->ID,
+                            __Registers.Panel = APP_STATE->DragDropRegisters->Panel,
+                            __Registers.Tab = APP_STATE->DragDropRegisters->View,
+                            __Registers.View = APP_STATE->DragDropRegisters->View,
+                            __Registers.PrevTab = TabDropPrev->ID
+                        );
+                    }
                 }
 
                 {
@@ -5728,6 +7626,19 @@ AppWindowFrame(void)
     UIPopPreferredWidth();
     UIPopTextPadding();
     UIEndBuild();
+
+    if (
+        APP_STATE->BindChangeActive &&
+        (
+            IsUIBoxEmpty(UIBoxFromKey(APP_STATE->BindChangeUIKey)) ||
+            (
+                UIActiveKey(UI_MOUSE_BTN_KIND_LEFT) != EMPTY_UI_KEY_VALUE &&
+                UIActiveKey(UI_MOUSE_BTN_KIND_LEFT) != APP_STATE->BindChangeUIKey
+            )
+        )
+    ) {
+        APP_STATE->BindChangeActive = FALSE;
+    }
 
     if (UIIsAnimatingFromState(APP_STATE->UI))
         AppRequestFrame();

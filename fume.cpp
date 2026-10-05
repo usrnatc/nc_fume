@@ -429,6 +429,7 @@ AppViewUI(r2f32 Rect)
     ConfigNode* InputRoot = ConfigNodeChildFromStr(QueryRoot, "input"_s8);
     ConfigNode* CmdRoot = ConfigNodeChildFromStr(QueryRoot, "cmd"_s8);
     Str8 CurrentInput = InputRoot->Head->String;
+    UISignal QueryEditSig = {};
  
     if (VS->QueryIsOpen) {
         Str8 CommandName = CmdRoot->Head->String;
@@ -447,26 +448,50 @@ AppViewUI(r2f32 Rect)
         }
  
         Rect.Y0 += 1.0f;
- 
+
+        b32 QueryIsFocused = !VS->ContentsAreFocused;
         UIBox* SearchRow = EMPTY_UI_BOX_VALUE;
  
-        UITag("pop"_s8) {
+        UITag("menu_bar"_s8) {
+            UISetNextFocusHot(
+                QueryIsFocused ? UI_FOCUS_KIND_ON : UI_FOCUS_KIND_NULL
+            );
+            UISetNextFocusActive(
+                QueryIsFocused ? UI_FOCUS_KIND_ON : UI_FOCUS_KIND_NULL
+            );
             UISetNextChildLayoutAxis(AXIS_2D_X);
             SearchRow = UIBuildBoxFromStr(
                 UI_BOX_KIND_DRAW_BACKGROUND,
                 "###search"_s8
             );
+            SearchRow->DefaultNavFocusActiveKey = QueryIsFocused
+                ? UIKeyFromStr(SearchRow->Key, "###search_edit"_s8)
+                : EMPTY_UI_KEY_VALUE;
+            SearchRow->DefaultNavFocusNextActiveKey = SearchRow->DefaultNavFocusActiveKey;
+
+            if (
+                SearchRow->Kind & UI_BOX_KIND_FOCUS_ACTIVE &&
+                !(SearchRow->Kind & UI_BOX_KIND_FOCUS_ACTIVE_DISABLED)
+            ) {
+                APP_STATE->TextEditMode = TRUE;
+            }
  
             UIParent(SearchRow) {
-                UIFocus(VS->QueryIsOpen && !VS->ContentsAreFocused ? UI_FOCUS_KIND_ON : UI_FOCUS_KIND_OFF) {
-                    if (CommandName.Size) {
+                UIPreferredWidth(UI_TEXT_DIM(2.0f, 1.0f)) {
+                    UITag("weak"_s8) {
+                        if (CommandInfo->IconKind != APP_ICON_KIND_NULL)
+                            UILabel(APP_ICON_KIND_TEXT_TABLE[CommandInfo->IconKind]);
+
+                        if (CommandName.Size)
                         UIPreferredWidth(UI_TEXT_DIM(2.0f, 1.0f)) {
                             UILabel(CommandInfo->DisplayName);
                         }
                     }
+                }
  
-                    UIWidthFill() {
-                        UISignal Sig = UILineEdit(
+                UIPreferredWidth(UI_PERCENT(1.0f, 0.0f)) {
+                    UITag("alt"_s8) {
+                        QueryEditSig = UILineEdit(
                             &VS->QueryCursor,
                             &VS->QueryMark,
                             VS->QueryBuffer,
@@ -475,19 +500,27 @@ AppViewUI(r2f32 Rect)
                             CurrentInput,
                             "###search_edit"_s8
                         );
- 
-                        if (UI_PRESSED(Sig)) {
-                            VS->QueryIsOpen = TRUE;
-                            VS->ContentsAreFocused = FALSE;
-                            AppCmd(APP_COMMAND_KIND_FOCUS_PANEL);
-                        }
+                    }
+                }
+
+                if (UI_PRESSED(QueryEditSig)) {
+                    VS->ContentsAreFocused = FALSE;
+                    AppCmd(APP_COMMAND_KIND_FOCUS_PANEL);
+                }
+
+                UIPreferredWidth(UI_PX(3.0f, 1.0f)) {
+                    UITextAlignment(UI_TEXT_ALIGN_CENTRE) {
+                        UISignal CloseSig = UIButton(
+                            "%S###search_close",
+                            PRINT_STR(APP_ICON_KIND_TEXT_TABLE[APP_ICON_KIND_X])
+                        );
+
+                        if (UI_CLICKED(CloseSig))
+                            VS->QueryIsOpen = FALSE;
                     }
                 }
             }
         }
- 
-        if (!VS->ContentsAreFocused)
-            APP_STATE->TextEditMode = TRUE;
  
         if (InputRoot == EMPTY_CFG_NODE_VALUE) {
             InputRoot = ConfigNodeChildFromStrOrAlloc(
@@ -536,26 +569,115 @@ AppViewUI(r2f32 Rect)
                     Scratch.MemPool,
                     "file"_s8
                 );
-                ConfigNodePtrArray Files = ConfigNodePtrArrayFromList(
+                ConfigNodePtrArray AllFiles = ConfigNodePtrArrayFromList(
                     Scratch.MemPool,
                     &FileList
                 );
+                ConfigNodePtrArray Files = {};
                 UIScrollPoint2D ScrollPosition = AppViewScrollPosition();
+                Str8 OpenCommandName = APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_OPEN].String;
+                Str8 Filter = {};
+
+                if (
+                    VS->QueryIsOpen &&
+                    StrMatch(
+                        CmdRoot->Head->String,
+                        APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_FILTER].String,
+                        0
+                    )
+                ) {
+                    Filter = Str(VS->QueryBuffer, VS->QueryStringSize);
+                }
+
+                Files.V = ArenaPushArrayZero(
+                    Scratch.MemPool,
+                    ConfigNode*,
+                    AllFiles.Count
+                );
+
+                for (u64 Index = 0; Index < AllFiles.Count; ++Index) {
+                    FMRangeList Matches = FuzzyFind(
+                        Scratch.MemPool,
+                        Filter,
+                        AllFiles.V[Index]->Head->String
+                    );
+
+                    if (Matches.Count == Matches.StrPartCount)
+                        Files.V[Files.Count++] = AllFiles.V[Index];
+                }
  
                 State->Cursor.Y = MIN(State->Cursor.Y, (i64) Files.Count);
                 State->Mark = State->Cursor;
- 
-                if (!Files.Count) {
-                    UIPadding(UI_PERCENT(1.0f, 0.0f)) {
-                        UIWidthFill() {
-                            UITextAlignment(UI_TEXT_ALIGN_CENTRE) {
-                                UITag("weak"_s8) {
-                                    UILabel("There are no files in the list."_s8);
-                                    UILabel("Press Ctrl+O to open a tlog file or a folder. You can also drop files into the terminal."_s8);
+
+                UITag("menu_bar"_s8) {
+                    UISetNextFlags(UI_BOX_KIND_DRAW_BACKGROUND);
+
+                    UINamedRow("###files_toolbar"_s8) {
+                        UITag("pop"_s8) {
+                            UIPreferredWidth(UI_PX(26.0f, 1.0f)) {
+                                UISignal AddSig = AppIconButton(
+                                    APP_ICON_KIND_ADD,
+                                    NULL,
+                                    "Add File or Folder###add_file"_s8
+                                );
+
+                                if (UI_CLICKED(AddSig)) {
+                                    AppCmd(
+                                        APP_COMMAND_KIND_RUN_COMMAND,
+                                        __Registers.CommandName = OpenCommandName
+                                    );
                                 }
                             }
                         }
+
+                        AppCommandBindingButtons(OpenCommandName, ""_s8, 1, 0);
                     }
+                }
+
+                Rect.Y0 += 1.0f;
+ 
+                if (!Files.Count) {
+                    UISpacer(UI_PERCENT(1.0f, 0.0f));
+
+                    UIWidthFill() {
+                        UITextAlignment(UI_TEXT_ALIGN_CENTRE) {
+                            UITag("weak"_s8) {
+                                UILabel(
+                                    AllFiles.Count
+                                        ? "No file agrees with the filter."_s8
+                                        : "There are no files in the list."_s8
+                                );
+                            }
+                        }
+                    }
+
+                    if (!AllFiles.Count) {
+                        UIRow() {
+                            UISpacer(UI_PERCENT(1.0f, 0.0f));
+
+                            UITag("pop"_s8) {
+                                UIPreferredWidth(UI_PX(26.0f, 1.0f)) {
+                                    UISignal AddSig = AppIconButton(
+                                        APP_ICON_KIND_ADD,
+                                        NULL,
+                                        "Add File or Folder###add_file_centre"_s8
+                                    );
+
+                                    if (UI_CLICKED(AddSig)) {
+                                        AppCmd(
+                                            APP_COMMAND_KIND_RUN_COMMAND,
+                                            __Registers.CommandName = OpenCommandName
+                                        );
+                                    }
+                                }
+                            }
+
+                            AppCommandBindingButtons(OpenCommandName, ""_s8, 1, 0);
+                            UISpacer(UI_PERCENT(1.0f, 0.0f));
+                        }
+                    }
+
+                    UISpacer(UI_PERCENT(1.0f, 0.0f));
                 } else {
                     UIScrollListParameters Params = {};
                     UIScrollListSignal ListSig = {};
@@ -601,7 +723,20 @@ AppViewUI(r2f32 Rect)
  
                                     UIParent(RowBox) {
                                         UIWidthFill() {
-                                            UILabel(Path);
+                                            UIBox* LabelBox = UILabel(Path).Box;
+
+                                            if (Filter.Size) {
+                                                FMRangeList Matches = FuzzyFind(
+                                                    Scratch.MemPool,
+                                                    Filter,
+                                                    Path
+                                                );
+
+                                                UIBoxEquipFuzzyMatchRanges(
+                                                    LabelBox,
+                                                    &Matches
+                                                );
+                                            }
                                         }
                                     }
  
@@ -627,8 +762,6 @@ AppViewUI(r2f32 Rect)
                         }
                     }
  
-                    // NOTE(nc): the selected file goes to the registers, thus
-                    //         : the commands that need a file work from this view
                     if (State->Cursor.Y > 0) {
                         Registers()->FilePath = ArenaPushStrCpy(
                             AppFrameMemPool(),
@@ -648,8 +781,6 @@ AppViewUI(r2f32 Rect)
                 AppStoreViewScrollPosition(ScrollPosition);
                 ReleaseScratch(Scratch);
             } else if (StrMatch(ViewName, "pending"_s8, 0)) {
-                // NOTE(nc): the view asks for the first bytes of the file. When
-                //         : the file stream has them, the tab changes to the report
                 Str8 FilePath = AppViewFilePath();
                 CKey Key = FSKeyFromPathRange(FilePath, Rng((u64) 0, (u64) KB(4)), 0);
                 u128 KeyHash = CHashFromKey(Key, 0);
@@ -709,7 +840,13 @@ AppViewUI(r2f32 Rect)
                 VS->QueryStringSize = 0;
             }
  
-            if (UIIsFocusActive() && UISlotPress(UI_EVENT_ACTION_SLOT_ACCEPT)) {
+            if (
+                UI_COMMITTED(QueryEditSig) ||
+                (
+                    UIIsFocusActive() &&
+                    UISlotPress(UI_EVENT_ACTION_SLOT_ACCEPT)
+                )
+            ) {
                 Str8 CommandName = AppViewQueryCommand();
                 Str8 Input = Str(VS->QueryBuffer, VS->QueryStringSize);
                 AppCommandKindInfo* CommandKindInfo = AppCommandKindInfoFromStr(
@@ -723,6 +860,16 @@ AppViewUI(r2f32 Rect)
                         Input
                     );
                     AppCmd(APP_COMMAND_KIND_COMPLETE_QUERY);
+                }
+
+                if (
+                    StrMatch(
+                        CommandName,
+                        APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_FILTER].String,
+                        0
+                    )
+                ) {
+                    VS->ContentsAreFocused = TRUE;
                 }
             }
         }

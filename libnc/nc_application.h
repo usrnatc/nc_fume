@@ -20,6 +20,8 @@ enum AppRegistersSlot {
     APP_REGISTERS_SLOT_PANEL,
     APP_REGISTERS_SLOT_TAB,
     APP_REGISTERS_SLOT_VIEW,
+    APP_REGISTERS_SLOT_PREV_TAB,
+    APP_REGISTERS_SLOT_DST_PANEL,
     APP_REGISTERS_SLOT_FILE_PATH,
     APP_REGISTERS_SLOT_OFFSET,
     APP_REGISTERS_SLOT_OFFSET_RANGE,
@@ -31,6 +33,7 @@ enum AppRegistersSlot {
     APP_REGISTERS_SLOT_FORCE_CONFIRM,
     APP_REGISTERS_SLOT_STRING,
     APP_REGISTERS_SLOT_COMMAND_NAME,
+    APP_REGISTERS_SLOT_DIRECTION,
     APP_REGISTERS_SLOT_OS_EVENT,
     APP_REGISTERS_SLOT_COUNT
 };
@@ -44,6 +47,11 @@ enum AppCommandKind {
     APP_COMMAND_KIND_POP_UP_ACCEPT,
     APP_COMMAND_KIND_POP_UP_CANCEL,
     APP_COMMAND_KIND_RESET_TO_DEFAULT_BINDINGS,
+    APP_COMMAND_KIND_NEW_PANEL_LEFT,
+    APP_COMMAND_KIND_NEW_PANEL_UP,
+    APP_COMMAND_KIND_NEW_PANEL_RIGHT,
+    APP_COMMAND_KIND_NEW_PANEL_DOWN,
+    APP_COMMAND_KIND_SPLIT_PANEL,
     APP_COMMAND_KIND_NEXT_PANEL,
     APP_COMMAND_KIND_PREV_PANEL,
     APP_COMMAND_KIND_FOCUS_PANEL,
@@ -53,6 +61,7 @@ enum AppCommandKind {
     APP_COMMAND_KIND_FOCUS_PANEL_DOWN,
     APP_COMMAND_KIND_GO_BACK,
     APP_COMMAND_KIND_GO_FORWARD,
+    APP_COMMAND_KIND_CLOSE_PANEL,
     APP_COMMAND_KIND_FOCUS_TAB,
     APP_COMMAND_KIND_NEXT_TAB,
     APP_COMMAND_KIND_PREV_TAB,
@@ -60,7 +69,11 @@ enum AppCommandKind {
     APP_COMMAND_KIND_MOVE_TAB_LEFT,
     APP_COMMAND_KIND_OPEN_TAB,
     APP_COMMAND_KIND_BUILD_TAB,
+    APP_COMMAND_KIND_DUPLICATE_TAB,
     APP_COMMAND_KIND_CLOSE_TAB,
+    APP_COMMAND_KIND_MOVE_VIEW,
+    APP_COMMAND_KIND_SET_TAB_VIEW,
+    APP_COMMAND_KIND_SET_TAB_FILE,
     APP_COMMAND_KIND_SET_CURRENT_PATH,
     APP_COMMAND_KIND_OPEN,
     APP_COMMAND_KIND_EDIT,
@@ -149,6 +162,19 @@ enum : u32 {
     APP_COMMAND_KIND_FLAG_LIST_IN_FILE   = (1 << 4),
 };
 
+typedef u32 AppCommandBindingButtonFlag;
+enum : u32 {
+    APP_COMMAND_BINDING_BTN_FLAG_ADD_NEW = (1 << 0),
+    APP_COMMAND_BINDING_BTN_FLAG_NO_EDIT = (1 << 1),
+};
+
+enum AppDragDropState {
+    APP_DRAG_DROP_STATE_NULL,
+    APP_DRAG_DROP_STATE_DRAGGING,
+    APP_DRAG_DROP_STATE_DROPPING,
+    APP_DRAG_DROP_STATE_COUNT
+};
+
 enum AppIconKind {
     APP_ICON_KIND_NULL,
     APP_ICON_KIND_FOLDER,
@@ -176,7 +202,7 @@ enum AppIconKind {
 
 typedef u32 AppThemePreset;
 enum : u32 {
-    APP_THEME_PRESET_FAR_MANAGER,
+    APP_THEME_PRESET_AYU_DARK,
     APP_THEME_PRESET_DEFAULT_DARK,
     APP_THEME_PRESET_DEFAULT_LIGHT,
     APP_THEME_PRESET_COUNT
@@ -200,6 +226,8 @@ enum AppQueryExpressionKind {
     X.Panel = Registers()->Panel,               \
     X.Tab = Registers()->Tab,                   \
     X.View = Registers()->View,                 \
+    X.PrevTab = Registers()->PrevTab,           \
+    X.DstPanel = Registers()->DstPanel,         \
     X.FilePath = Registers()->FilePath,         \
     X.Offset = Registers()->Offset,             \
     X.OffsetRange = Registers()->OffsetRange,   \
@@ -211,6 +239,7 @@ enum AppQueryExpressionKind {
     X.ForceConfirm = Registers()->ForceConfirm, \
     X.String = Registers()->String,             \
     X.CommandName = Registers()->CommandName,   \
+    X.Direction = Registers()->Direction,       \
     X.OSEvent = Registers()->OSEvent            \
 
 #define AppPushRegisters(...) [&]() -> AppRegisters* { \
@@ -235,6 +264,8 @@ struct AppRegisters {
     ConfigID    Panel;
     ConfigID    Tab;
     ConfigID    View;
+    ConfigID    PrevTab;
+    ConfigID    DstPanel;
     Str8        FilePath;
     u64         Offset;
     r1u64       OffsetRange;
@@ -246,6 +277,7 @@ struct AppRegisters {
     b32         ForceConfirm;
     Str8        String;
     Str8        CommandName;
+    Direction2D Direction;
     InputEvent* OSEvent;
 };
 
@@ -379,6 +411,20 @@ struct AppState {
     u8                 ErrorBuffer[512];
     u64                ErrorStrSize;
     u64                ErrorFrameIndex;
+    Arena*             DragDropMemPool;
+    AppRegisters*      DragDropRegisters;
+    AppRegistersSlot   DragDropRegistersSlot;
+    AppDragDropState   DragDropState;
+    Arena*             BindChangeMemPool;
+    b32                BindChangeActive;
+    ConfigID           BindChangeBindingID;
+    Str8               BindChangeCommandName;
+    UIKey              BindChangeUIKey;
+    ConfigID           TabCtxMenuTab;
+    TextPoint          TabCtxMenuCursor;
+    TextPoint          TabCtxMenuMark;
+    u8                 TabCtxMenuFileBuffer[KB(1)];
+    u64                TabCtxMenuFileSize;
 };
 
 struct BindingTableEntry {
@@ -412,7 +458,7 @@ extern AppState* APP_STATE;
 
 EXTERN_C_LINK_BEGIN
 extern AppCommandKindInfo APP_COMMAND_KIND_INFO_TABLE[APP_COMMAND_KIND_COUNT];
-extern BindingTableEntry APP_DEFAULT_BINDING_TABLE[79];
+extern BindingTableEntry APP_DEFAULT_BINDING_TABLE[82];
 extern Str8 APP_ICON_KIND_TEXT_TABLE[APP_ICON_KIND_COUNT];
 extern Str8 APP_THEME_PRESET_DISPLAY_STR_TABLE[APP_THEME_PRESET_COUNT];
 extern Str8 APP_THEME_PRESET_CODE_STR_TABLE[APP_THEME_PRESET_COUNT];
@@ -425,6 +471,10 @@ void CopyRegisters(Arena* MemPool, AppRegisters* Dst, AppRegisters* Src);
 AppRegisters* CopyRegisters(Arena* MemPool, AppRegisters* Regs);
 void ListPush(Arena* MemPool, AppCommandList* List, Str8 Name, AppRegisters* Regs);
 void ListPush(Arena* MemPool, AppQueryResultList* List, AppQueryResult Entry);
+b32 AppDragIsActive(void);
+void AppDragBegin(AppRegistersSlot Slot);
+b32 AppDragDrop(void);
+void AppDragKill(void);
 Str8 AppSettingFromNameStr8(Str8 Name);
 b32 AppSettingFromNameB32(Str8 Name);
 u64 AppSettingFromNameU64(Str8 Name);
@@ -460,6 +510,7 @@ FancyStrList AppTitleFStrFromConfig(Arena* MemPool, ConfigNode* Config);
 UISignal AppIconButton(AppIconKind Kind, FMRangeList* Matches, Str8 String);
 UISignal AppIconButton(AppIconKind Kind, FMRangeList* Matches, char* Fmt, ...);
 UISignal AppMenuBarButton(Str8 String);
+void AppCommandBindingButtons(Str8 Name, Str8 Filter, u64 Limit, AppCommandBindingButtonFlag Flags);
 UISignal AppCommandSpecButton(Str8 Name);
 void AppCommandListMenuButtons(Str8* CommandNames, u64 CommandNamesCount, u32* FastPointCodePoints);
 void AppInit(CommandLine* CLI);
