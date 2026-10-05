@@ -3048,21 +3048,6 @@ AppCommandBindingButtons(
             PRINT_STR(Name)
         );
 
-        // UIBox* Box = UIBuildBoxFromStrFmt(
-        //     (
-        //         UI_BOX_KIND_DRAW_TEXT |
-        //         UI_BOX_KIND_DRAW_BACKGROUND |
-        //         UI_BOX_KIND_FOCUS_NAV_SKIP |
-        //         UI_BOX_KIND_MOUSE_CLICKABLE |
-        //         UI_BOX_KIND_DRAW_HOT_EFFECTS |
-        //         UI_BOX_KIND_DRAW_ACTIVE_EFFECTS
-        //     ),
-        //     "%S###add_binding_%S",
-        //     AddingNewBinding
-        //         ? PRINT_STR("\xE2\x80\xA6"_s8)
-        //         : PRINT_STR(APP_ICON_KIND_TEXT_TABLE[APP_ICON_KIND_ADD]),
-        //     PRINT_STR(Name)
-        // );
         UISignal Sig = UISignalFromBox(Box);
 
         if (!AddingNewBinding && UI_CLICKED(Sig)) {
