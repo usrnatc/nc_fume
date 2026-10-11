@@ -691,8 +691,11 @@ StrFromEventKind(InputEventKind Kind)
 }
 
 Str8 
-StrFromInputModifierInput(Arena* MemPool, InputModifierKind Modifiers, InputKind Input)
-{
+StrFromInputModifierInput(
+    Arena* MemPool, 
+    InputModifierKind Modifiers, 
+    InputKind Input
+) {
     Str8 Result = {};
 
     if (Input != INPUT_KIND_NULL) {
@@ -763,8 +766,11 @@ InputPress(InputEventList* List, InputModifierKind Modifier, InputKind Input)
 }
 
 b32 
-InputRelease(InputEventList* List, InputModifierKind Modifier, InputKind Input)
-{
+InputRelease(
+    InputEventList* List, 
+    InputModifierKind Modifier, 
+    InputKind Input
+) {
     b32 Result = FALSE;
 
     for (InputEvent* Event = List->Head; Event; Event = Event->Next) {
@@ -945,7 +951,10 @@ FlushPaste(WinPaste* Paste)
         for (u64 Index = 0; Index < Paste->Count; ++Index)
             TextSize += UTF8Encode(Text + TextSize, Paste->CodePoints[Index]);
 
-        Str8List Paths = PathListFromPaste(TERMINAL_MEMPOOL, Str(Text, TextSize));
+        Str8List Paths = PathListFromPaste(
+            TERMINAL_MEMPOOL, 
+            Str(Text, TextSize)
+        );
 
         if (Paths.Count) {
             InputEvent* Event = PushEvent(EVENT_KIND_FILE_DROP);
@@ -969,8 +978,16 @@ PushKeyRecord(KEY_EVENT_RECORD* Key, WinPaste* Paste)
 {
     InputKind Input = TERMINAL_STATE->InputKindFromVKey[Key->wVirtualKeyCode & 0xFF];
     u32 CodePoint = CodePointFromKeyRecord(Key);
-    b32 IsModifier = (Input == INPUT_KIND_CTRL || Input == INPUT_KIND_SHIFT || Input == INPUT_KIND_ALT);
-    b32 IsPastedText = (Paste->CodePoints && Key->uChar.UnicodeChar >= 32 && Key->uChar.UnicodeChar != 127);
+    b32 IsModifier = (
+        Input == INPUT_KIND_CTRL || 
+        Input == INPUT_KIND_SHIFT || 
+        Input == INPUT_KIND_ALT
+    );
+    b32 IsPastedText = (
+        Paste->CodePoints && 
+        Key->uChar.UnicodeChar >= 32 && 
+        Key->uChar.UnicodeChar != 127
+    );
 
     TERMINAL_STATE->Modifiers = ModifiersFromControlKeyState(Key->dwControlKeyState);
 
@@ -978,14 +995,32 @@ PushKeyRecord(KEY_EVENT_RECORD* Key, WinPaste* Paste)
         FlushPaste(Paste);
 
     if (!IsPastedText && Input != INPUT_KIND_NULL) {
-        InputEvent* Event = PushEvent(Key->bKeyDown ? EVENT_KIND_PRESS : EVENT_KIND_RELEASE);
+        InputEvent* Event = PushEvent(
+            Key->bKeyDown 
+                ? EVENT_KIND_PRESS 
+                : EVENT_KIND_RELEASE
+        );
 
         Event->Input = Input;
         Event->RepeatCount = Key->wRepeatCount;
-        Event->IsRepeat = (Key->bKeyDown && TERMINAL_STATE->InputIsDown[Input]);
+        Event->IsRepeat = (
+            Key->bKeyDown && 
+            TERMINAL_STATE->InputIsDown[Input]
+        );
         Event->RightSided = (
-            ((Input == INPUT_KIND_CTRL || Input == INPUT_KIND_ALT) && (Key->dwControlKeyState & ENHANCED_KEY)) ||
-            (Input == INPUT_KIND_SHIFT && Key->wVirtualScanCode == 0x36)
+            (
+                (
+                    Input == INPUT_KIND_CTRL || 
+                    Input == INPUT_KIND_ALT
+                ) && 
+                (
+                    Key->dwControlKeyState & ENHANCED_KEY
+                )
+            ) ||
+            (
+                Input == INPUT_KIND_SHIFT && 
+                Key->wVirtualScanCode == 0x36
+            )
         );
 
         if (Input == INPUT_KIND_ALT)
@@ -1021,14 +1056,22 @@ PushMouseRecord(MOUSE_EVENT_RECORD* Mouse)
         {RIGHTMOST_BUTTON_PRESSED,     INPUT_KIND_RIGHT_MOUSE_BTN}
     };
 
-    v2f32 Position = Vec((f32) Mouse->dwMousePosition.X, (f32) Mouse->dwMousePosition.Y);
+    v2f32 Position = Vec(
+        (f32) Mouse->dwMousePosition.X, 
+        (f32) Mouse->dwMousePosition.Y
+    );
     DWORD Buttons = Mouse->dwButtonState & 0xFFFF;
     DWORD Changed = Buttons ^ TERMINAL_STATE->MouseButtons;
     i16 WheelDelta = (i16) (Mouse->dwButtonState >> 16);
 
-    TERMINAL_STATE->Modifiers = ModifiersFromControlKeyState(Mouse->dwControlKeyState);
+    TERMINAL_STATE->Modifiers = ModifiersFromControlKeyState(
+        Mouse->dwControlKeyState
+    );
 
-    if (Position.X != TERMINAL_STATE->Mouse.X || Position.Y != TERMINAL_STATE->Mouse.Y) {
+    if (
+        Position.X != TERMINAL_STATE->Mouse.X || 
+        Position.Y != TERMINAL_STATE->Mouse.Y
+    ) {
         InputEvent* Event = EVENT_LIST.Tail;
 
         if (!Event || Event->Kind != EVENT_KIND_MOUSE_MOVE)
@@ -1041,7 +1084,11 @@ PushMouseRecord(MOUSE_EVENT_RECORD* Mouse)
     for (u64 Index = 0; Index < ARRAY_COUNT(Map); ++Index) {
         if (Changed & Map[Index].Button) {
             b32 IsDown = !!(Buttons & Map[Index].Button);
-            InputEvent* Event = PushEvent(IsDown ? EVENT_KIND_PRESS : EVENT_KIND_RELEASE);
+            InputEvent* Event = PushEvent(
+                IsDown 
+                    ? EVENT_KIND_PRESS 
+                    : EVENT_KIND_RELEASE
+            );
 
             Event->Input = Map[Index].Input;
             Event->Position = Position;
@@ -1056,7 +1103,9 @@ PushMouseRecord(MOUSE_EVENT_RECORD* Mouse)
         f32 Notches = (f32) WheelDelta / (f32) WHEEL_DELTA;
 
         Event->Position = Position;
-        Event->PositionDelta = (Mouse->dwEventFlags & MOUSE_WHEELED) ? Vec(0.0f, -Notches) : Vec(Notches, 0.0f);
+        Event->PositionDelta = (Mouse->dwEventFlags & MOUSE_WHEELED) 
+            ? Vec(0.0f, -Notches) 
+            : Vec(Notches, 0.0f);
     }
 }
 
@@ -1065,7 +1114,11 @@ PushFocusRecord(FOCUS_EVENT_RECORD* Focus)
 {
     if (!Focus->bSetFocus) {
         PushEvent(EVENT_KIND_CONSOLE_LOSE_FOCUS);
-        MemSet(TERMINAL_STATE->InputIsDown, 0, sizeof(TERMINAL_STATE->InputIsDown));
+        MemSet(
+            TERMINAL_STATE->InputIsDown, 
+            0, 
+            sizeof(TERMINAL_STATE->InputIsDown)
+        );
         TERMINAL_STATE->MouseButtons = 0;
         TERMINAL_STATE->Modifiers = (InputModifierKind) 0;
     }
@@ -1091,8 +1144,12 @@ RefreshConsoleRect(void)
     if (GetConsoleScreenBufferInfo(TERMINAL_STATE->Out, &Info)) {
         TERMINAL_STATE->Rect.X0 = 0.0f;
         TERMINAL_STATE->Rect.Y0 = 0.0f;
-        TERMINAL_STATE->Rect.X1 = (f32) (Info.srWindow.Right - Info.srWindow.Left + 1);
-        TERMINAL_STATE->Rect.Y1 = (f32) (Info.srWindow.Bottom - Info.srWindow.Top + 1);
+        TERMINAL_STATE->Rect.X1 = (f32) (
+            Info.srWindow.Right - Info.srWindow.Left + 1
+        );
+        TERMINAL_STATE->Rect.Y1 = (f32) (
+            Info.srWindow.Bottom - Info.srWindow.Top + 1
+        );
     }
 }
 
@@ -1113,8 +1170,18 @@ TerminalInit(void)
 
     GetConsoleMode(TERMINAL_STATE->In, &TERMINAL_STATE->LastInMode);
     GetConsoleMode(TERMINAL_STATE->Out, &TERMINAL_STATE->LastOutMode);
-    SetConsoleMode(TERMINAL_STATE->In, ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS);
-    SetConsoleMode(TERMINAL_STATE->Out, TERMINAL_STATE->LastOutMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
+    SetConsoleMode(
+        TERMINAL_STATE->In, 
+        ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS
+    );
+    SetConsoleMode(
+        TERMINAL_STATE->Out, 
+        (
+            TERMINAL_STATE->LastOutMode | 
+            ENABLE_VIRTUAL_TERMINAL_PROCESSING | 
+            DISABLE_NEWLINE_AUTO_RETURN
+        )
+    );
     SetConsoleCtrlHandler(WinConsoleCtrlFunc, TRUE);
 
     Str8 Enter = "\x1b[?1049h\x1b[?25l"_s8;
@@ -1163,51 +1230,51 @@ TerminalInit(void)
     for (u64 I = 0xDF, J = INPUT_KIND_EX0; I < 0xFF; ++I, ++J)
         Table[I] = (InputKind) J;
 
-    Table[VK_SPACE]      = INPUT_KIND_SPACE;
-    Table[VK_OEM_3]      = INPUT_KIND_TILDE;
-    Table[VK_OEM_MINUS]  = INPUT_KIND_MINUS;
-    Table[VK_OEM_PLUS]   = INPUT_KIND_EQUAL;
-    Table[VK_OEM_4]      = INPUT_KIND_LEFTBRACKET;
-    Table[VK_OEM_6]      = INPUT_KIND_RIGHTBRACKET;
-    Table[VK_OEM_1]      = INPUT_KIND_SEMICOLON;
-    Table[VK_OEM_7]      = INPUT_KIND_QUOTE;
-    Table[VK_OEM_COMMA]  = INPUT_KIND_COMMA;
+    Table[VK_SPACE] = INPUT_KIND_SPACE;
+    Table[VK_OEM_3] = INPUT_KIND_TILDE;
+    Table[VK_OEM_MINUS] = INPUT_KIND_MINUS;
+    Table[VK_OEM_PLUS] = INPUT_KIND_EQUAL;
+    Table[VK_OEM_4] = INPUT_KIND_LEFTBRACKET;
+    Table[VK_OEM_6] = INPUT_KIND_RIGHTBRACKET;
+    Table[VK_OEM_1] = INPUT_KIND_SEMICOLON;
+    Table[VK_OEM_7] = INPUT_KIND_QUOTE;
+    Table[VK_OEM_COMMA] = INPUT_KIND_COMMA;
     Table[VK_OEM_PERIOD] = INPUT_KIND_PERIOD;
-    Table[VK_OEM_2]      = INPUT_KIND_SLASH;
-    Table[VK_OEM_5]      = INPUT_KIND_BACKSLASH;
-    Table[VK_TAB]        = INPUT_KIND_TAB;
-    Table[VK_PAUSE]      = INPUT_KIND_PAUSE;
-    Table[VK_ESCAPE]     = INPUT_KIND_ESC;
-    Table[VK_UP]         = INPUT_KIND_UP;
-    Table[VK_LEFT]       = INPUT_KIND_LEFT;
-    Table[VK_DOWN]       = INPUT_KIND_DOWN;
-    Table[VK_RIGHT]      = INPUT_KIND_RIGHT;
-    Table[VK_BACK]       = INPUT_KIND_BACKSPACE;
-    Table[VK_RETURN]     = INPUT_KIND_RETURN;
-    Table[VK_DELETE]     = INPUT_KIND_DELETE;
-    Table[VK_INSERT]     = INPUT_KIND_INSERT;
-    Table[VK_PRIOR]      = INPUT_KIND_PAGEUP;
-    Table[VK_NEXT]       = INPUT_KIND_PAGEDOWN;
-    Table[VK_HOME]       = INPUT_KIND_HOME;
-    Table[VK_END]        = INPUT_KIND_END;
-    Table[VK_CAPITAL]    = INPUT_KIND_CAPSLOCK;
-    Table[VK_NUMLOCK]    = INPUT_KIND_NUMLOCK;
-    Table[VK_SCROLL]     = INPUT_KIND_SCROLLLOCK;
-    Table[VK_APPS]       = INPUT_KIND_SUPER;
-    Table[VK_CONTROL]    = INPUT_KIND_CTRL;
-    Table[VK_LCONTROL]   = INPUT_KIND_CTRL;
-    Table[VK_RCONTROL]   = INPUT_KIND_CTRL;
-    Table[VK_SHIFT]      = INPUT_KIND_SHIFT;
-    Table[VK_LSHIFT]     = INPUT_KIND_SHIFT;
-    Table[VK_RSHIFT]     = INPUT_KIND_SHIFT;
-    Table[VK_MENU]       = INPUT_KIND_ALT;
-    Table[VK_LMENU]      = INPUT_KIND_ALT;
-    Table[VK_RMENU]      = INPUT_KIND_ALT;
-    Table[VK_DIVIDE]     = INPUT_KIND_NUM_SLASH;
-    Table[VK_MULTIPLY]   = INPUT_KIND_NUM_STAR;
-    Table[VK_SUBTRACT]   = INPUT_KIND_NUM_MINUS;
-    Table[VK_ADD]        = INPUT_KIND_NUM_PLUS;
-    Table[VK_DECIMAL]    = INPUT_KIND_NUM_PERIOD;
+    Table[VK_OEM_2] = INPUT_KIND_SLASH;
+    Table[VK_OEM_5] = INPUT_KIND_BACKSLASH;
+    Table[VK_TAB] = INPUT_KIND_TAB;
+    Table[VK_PAUSE] = INPUT_KIND_PAUSE;
+    Table[VK_ESCAPE] = INPUT_KIND_ESC;
+    Table[VK_UP] = INPUT_KIND_UP;
+    Table[VK_LEFT] = INPUT_KIND_LEFT;
+    Table[VK_DOWN] = INPUT_KIND_DOWN;
+    Table[VK_RIGHT] = INPUT_KIND_RIGHT;
+    Table[VK_BACK] = INPUT_KIND_BACKSPACE;
+    Table[VK_RETURN] = INPUT_KIND_RETURN;
+    Table[VK_DELETE] = INPUT_KIND_DELETE;
+    Table[VK_INSERT] = INPUT_KIND_INSERT;
+    Table[VK_PRIOR] = INPUT_KIND_PAGEUP;
+    Table[VK_NEXT] = INPUT_KIND_PAGEDOWN;
+    Table[VK_HOME] = INPUT_KIND_HOME;
+    Table[VK_END] = INPUT_KIND_END;
+    Table[VK_CAPITAL] = INPUT_KIND_CAPSLOCK;
+    Table[VK_NUMLOCK] = INPUT_KIND_NUMLOCK;
+    Table[VK_SCROLL] = INPUT_KIND_SCROLLLOCK;
+    Table[VK_APPS] = INPUT_KIND_SUPER;
+    Table[VK_CONTROL] = INPUT_KIND_CTRL;
+    Table[VK_LCONTROL] = INPUT_KIND_CTRL;
+    Table[VK_RCONTROL] = INPUT_KIND_CTRL;
+    Table[VK_SHIFT] = INPUT_KIND_SHIFT;
+    Table[VK_LSHIFT] = INPUT_KIND_SHIFT;
+    Table[VK_RSHIFT] = INPUT_KIND_SHIFT;
+    Table[VK_MENU] = INPUT_KIND_ALT;
+    Table[VK_LMENU] = INPUT_KIND_ALT;
+    Table[VK_RMENU] = INPUT_KIND_ALT;
+    Table[VK_DIVIDE] = INPUT_KIND_NUM_SLASH;
+    Table[VK_MULTIPLY] = INPUT_KIND_NUM_STAR;
+    Table[VK_SUBTRACT] = INPUT_KIND_NUM_MINUS;
+    Table[VK_ADD] = INPUT_KIND_NUM_PLUS;
+    Table[VK_DECIMAL] = INPUT_KIND_NUM_PERIOD;
 }
 
 void 
@@ -1275,7 +1342,14 @@ GetEvents(Arena* MemPool, b32 Wait)
         TERMINAL_STATE->WakeupEvent
     };
 
-    DWORD WaitResult = WaitForMultipleObjects(ARRAY_COUNT(WaitHandles), WaitHandles, FALSE, Wait ? INFINITE : 0);
+    DWORD WaitResult = WaitForMultipleObjects(
+        ARRAY_COUNT(WaitHandles), 
+        WaitHandles, 
+        FALSE, 
+        Wait 
+            ? INFINITE 
+            : 0
+    );
     DWORD RecordCount = 0;
 
     if (WaitResult == WAIT_OBJECT_0 + 1)
@@ -1284,9 +1358,18 @@ GetEvents(Arena* MemPool, b32 Wait)
     GetNumberOfConsoleInputEvents(TERMINAL_STATE->In, &RecordCount);
 
     if (RecordCount) {
-        INPUT_RECORD* Records = ArenaPushArray(MemPool, INPUT_RECORD, RecordCount);
+        INPUT_RECORD* Records = ArenaPushArray(
+            MemPool, 
+            INPUT_RECORD, 
+            RecordCount
+        );
 
-        ReadConsoleInputW(TERMINAL_STATE->In, Records, RecordCount, &RecordCount);
+        ReadConsoleInputW(
+            TERMINAL_STATE->In, 
+            Records, 
+            RecordCount, 
+            &RecordCount
+        );
 
         u64 DistinctTextCount = 0;
         u32 LastTextUnit = 0;

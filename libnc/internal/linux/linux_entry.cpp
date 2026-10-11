@@ -9,6 +9,9 @@ SignalHandler(int Signal, siginfo_t* SigInfo, void* Param)
         for (;;)
             sleep(U32_MAX);
 
+    if (TERMINAL_STATE)
+        TerminalRelease();
+
     local void* IPs[4096] = {};
     int IPsCount = backtrace(IPs, ARRAY_COUNT(IPs));
 

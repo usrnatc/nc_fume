@@ -34,6 +34,10 @@
 #include <netinet/tcp.h>
 #include <time.h>
 #include <unistd.h>
+#include <poll.h>
+#include <sys/eventfd.h>
+#include <sys/ioctl.h>
+#include <termios.h>
 
 // // @defines____________________________________________________________________
 // #if defined(NC_CPU_X86_64)

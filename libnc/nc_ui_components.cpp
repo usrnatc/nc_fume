@@ -597,7 +597,7 @@ UIRowBegin(void)
 UISignal 
 UIRowEnd(void)
 {
-    return UINamedColumnEnd();
+    return UINamedRowEnd();
 }
 
 UIBox* 

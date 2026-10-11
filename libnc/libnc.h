@@ -92,6 +92,7 @@
     #include "linux/linux_sync.cpp"
     #include "linux/linux_thread.cpp"
     #include "linux/linux_print.cpp"
+    #include "linux/linux_terminal.cpp"
     #include "linux/linux_sock.cpp"
     #include "linux/linux_entry.cpp"
 #elif defined(NC_OS_MAC)

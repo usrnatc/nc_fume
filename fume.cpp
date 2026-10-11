@@ -561,7 +561,12 @@ AppViewUI(r2f32 Rect)
     }
  
     UIParent(ViewContainer) {
-        UIFocus(VS->QueryIsOpen && !VS->ContentsAreFocused ? UI_FOCUS_KIND_OFF : UI_FOCUS_KIND_NULL) {
+        UIFocus(
+            VS->QueryIsOpen && 
+            !VS->ContentsAreFocused 
+                ? UI_FOCUS_KIND_OFF 
+                : UI_FOCUS_KIND_NULL
+        ) {
             if (StrMatch(ViewName, "files"_s8, 0)) {
                 TempArena Scratch = GetScratch(NULL, 0);
                 FUMEFilesViewState* State = GetAppViewState(FUMEFilesViewState);
@@ -705,7 +710,9 @@ AppViewUI(r2f32 Rect)
                                 Row <= Visible.Max && Row < (i64) Files.Count;
                                 ++Row
                             ) {
-                                Str8 Path = Files.V[Row]->Head->String;
+                                Str8 Path = StrSkipLastSlash(
+                                    Files.V[Row]->Head->String
+                                );
                                 b32 IsCursor = (State->Cursor.Y == Row + 1);
  
                                 UITag(IsCursor ? "pop"_s8 : ""_s8) {
@@ -1101,9 +1108,25 @@ EntryPoint(CommandLine* CLI)
     }
 
     {
-        Str8JoinPart Join = { ""_s8, ", "_s8, ""_s8 };
-        Str8 Flags[] = { "sys"_s8, "comp"_s8, "msg"_s8, "time"_s8, "offset"_s8 };
-        Str8 Names[] = { "system "_s8, "component "_s8, "message "_s8, "seconds "_s8, "offset 0x"_s8 };
+        Str8JoinPart Join = {
+            ""_s8, 
+            ", "_s8, 
+            ""_s8 
+        };
+        Str8 Flags[] = {
+            "sys"_s8, 
+            "comp"_s8, 
+            "msg"_s8, 
+            "time"_s8, 
+            "offset"_s8 
+        };
+        Str8 Names[] = { 
+            "system "_s8, 
+            "component "_s8, 
+            "message "_s8, 
+            "seconds "_s8, 
+            "offset 0x"_s8 
+        };
 
         for (u32 Index = 0; Index < ARRAY_COUNT(Flags); ++Index) {
             Str8List Strings = CommandLineStrings(CLI, Flags[Index]);
@@ -1114,7 +1137,13 @@ EntryPoint(CommandLine* CLI)
                     &Label,
                     "%S%S    ",
                     PRINT_STR(Names[Index]),
-                    PRINT_STR(StrListJoin(Scratch.MemPool, &Strings, &Join))
+                    PRINT_STR(
+                        StrListJoin(
+                            Scratch.MemPool, 
+                            &Strings, 
+                            &Join
+                        )
+                    )
                 );
             }
         }
